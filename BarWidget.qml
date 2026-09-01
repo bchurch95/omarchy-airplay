@@ -65,6 +65,9 @@ BarWidget {
         } catch (e) {}
       }
     }
+    xhr.send()
+  }
+
   function setHomepodVolume(id, vol) {
     for (var i = 0; i < root.homepodOutputs.length; i++) {
       if (root.homepodOutputs[i].id === id) {
