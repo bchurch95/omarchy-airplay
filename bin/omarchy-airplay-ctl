@@ -168,11 +168,34 @@ clear_restore() {
 set_sink() {
   local target="${1:-homepods}"
   local target_sink=""
+  mkdir -p "$state_dir"
+
   if [[ "$target" == "homepods" ]]; then
+    local current
+    current="$(pactl get-default-sink 2>/dev/null || true)"
+    if [[ -n "$current" && "$current" != "HomePods" ]]; then
+      printf '%s\n' "$current" > "${state_dir}/previous_sink"
+    fi
+
     target_sink="HomePods"
     pactl set-default-sink "$target_sink" 2>/dev/null || wpctl set-default HomePods 2>/dev/null || true
   else
-    target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods/ { print $2; exit }')"
+    if [[ -f "${state_dir}/previous_sink" ]]; then
+      local prev
+      prev="$(<"${state_dir}/previous_sink")"
+      if pactl list sinks short 2>/dev/null | grep -q "$prev"; then
+        target_sink="$prev"
+      fi
+    fi
+
+    if [[ -z "$target_sink" ]]; then
+      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 ~ /Speaker|analog|Headphones/ { print $2; exit }')"
+    fi
+
+    if [[ -z "$target_sink" ]]; then
+      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods/ { print $2; exit }')"
+    fi
+
     if [[ -n "$target_sink" ]]; then
       pactl set-default-sink "$target_sink" 2>/dev/null || true
     fi
@@ -180,12 +203,7 @@ set_sink() {
 
   if [[ -n "$target_sink" ]]; then
     for input in $(pactl list sink-inputs short 2>/dev/null | cut -f1); do
-      # Avoid moving our internal parec bridge itself
-      local name
-      name="$(pactl list sink-inputs 2>/dev/null | grep -B 20 "Sink Input #$input" | grep "application.name" | cut -d'=' -f2 | tr -d ' "' || true)"
-      if [[ "$name" != "parec" ]]; then
-        pactl move-sink-input "$input" "$target_sink" 2>/dev/null || true
-      fi
+      pactl move-sink-input "$input" "$target_sink" 2>/dev/null || true
     done
   fi
 }
