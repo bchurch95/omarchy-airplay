@@ -65,7 +65,16 @@ BarWidget {
         } catch (e) {}
       }
     }
-    xhr.send()
+  function setHomepodVolume(id, vol) {
+    for (var i = 0; i < root.homepodOutputs.length; i++) {
+      if (root.homepodOutputs[i].id === id) {
+        root.homepodOutputs[i].volume = Math.round(vol)
+      }
+    }
+    var xhr = new XMLHttpRequest()
+    xhr.open("PUT", "http://localhost:3689/api/outputs/" + id, true)
+    xhr.setRequestHeader("Content-Type", "application/json")
+    xhr.send(JSON.stringify({ volume: Math.round(vol) }))
   }
 
   function toggleHomepod(id) {

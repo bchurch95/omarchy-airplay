@@ -129,76 +129,104 @@ Panel {
               readonly property bool isSelected: modelData.selected === true
 
               width: contentColumn.width
-              height: Style.space(48)
+              implicitHeight: speakerContent.implicitHeight + Style.spacing.sm * 2
               radius: Style.cornerRadius
               color: isSelected ? Style.hoverFillFor(Color.accent, root.foreground) : (rowClick.containsMouse ? Style.hoverFillFor(root.foreground, root.foreground) : "transparent")
               border.color: isSelected ? Color.accent : "transparent"
               border.width: isSelected ? 1 : 0
 
-              MouseArea {
-                id: rowClick
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                  if (root.hostWidget && root.hostWidget.toggleHomepod) {
-                    root.hostWidget.toggleHomepod(modelData.id)
-                  }
-                }
-              }
-
-              Row {
-                anchors.fill: parent
+              Column {
+                id: speakerContent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
                 anchors.margins: Style.spacing.rowPaddingX
-                spacing: Style.spacing.lg
+                spacing: Style.spacing.xs
 
-                Text {
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: "󰓃"
-                  color: speakerRow.isSelected ? Color.accent : root.dim
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.icon
-                }
+                Item {
+                  width: parent.width
+                  height: Style.space(36)
 
-                Column {
-                  anchors.verticalCenter: parent.verticalCenter
-                  width: parent.width - Style.space(90)
-                  spacing: Style.spacing.xxs
-
-                  Text {
-                    text: modelData.name || "HomePod"
-                    color: root.foreground
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    font.bold: speakerRow.isSelected
-                    elide: Text.ElideRight
-                    width: parent.width
+                  MouseArea {
+                    id: rowClick
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                      if (root.hostWidget && root.hostWidget.toggleHomepod) {
+                        root.hostWidget.toggleHomepod(modelData.id)
+                      }
+                    }
                   }
 
-                  Text {
-                    text: modelData.type + (speakerRow.isSelected ? " • Active" : "")
-                    color: speakerRow.isSelected ? Color.accent : root.dim
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
+                  Row {
+                    anchors.fill: parent
+                    spacing: Style.spacing.lg
+
+                    Text {
+                      anchors.verticalCenter: parent.verticalCenter
+                      text: "󰓃"
+                      color: speakerRow.isSelected ? Color.accent : root.dim
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.icon
+                    }
+
+                    Column {
+                      anchors.verticalCenter: parent.verticalCenter
+                      width: parent.width - Style.space(90)
+                      spacing: Style.spacing.xxs
+
+                      Text {
+                        text: modelData.name || "HomePod"
+                        color: root.foreground
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.body
+                        font.bold: speakerRow.isSelected
+                        elide: Text.ElideRight
+                        width: parent.width
+                      }
+
+                      Text {
+                        text: modelData.type + (speakerRow.isSelected ? (" • " + (modelData.volume || 100) + "%") : "")
+                        color: speakerRow.isSelected ? Color.accent : root.dim
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.caption
+                      }
+                    }
+
+                    Rectangle {
+                      anchors.verticalCenter: parent.verticalCenter
+                      anchors.right: parent.right
+                      width: Style.space(20)
+                      height: Style.space(20)
+                      radius: Style.space(10)
+                      color: speakerRow.isSelected ? Color.accent : "transparent"
+                      border.color: speakerRow.isSelected ? Color.accent : root.dim
+                      border.width: 1.5
+
+                      Text {
+                        anchors.centerIn: parent
+                        visible: speakerRow.isSelected
+                        text: "✓"
+                        color: "#ffffff"
+                        font.pixelSize: 10
+                        font.bold: true
+                      }
+                    }
                   }
                 }
 
-                Rectangle {
-                  anchors.verticalCenter: parent.verticalCenter
-                  width: Style.space(20)
-                  height: Style.space(20)
-                  radius: Style.space(10)
-                  color: speakerRow.isSelected ? Color.accent : "transparent"
-                  border.color: speakerRow.isSelected ? Color.accent : root.dim
-                  border.width: 1.5
-
-                  Text {
-                    anchors.centerIn: parent
-                    visible: speakerRow.isSelected
-                    text: "✓"
-                    color: "#ffffff"
-                    font.pixelSize: 10
-                    font.bold: true
+                Slider {
+                  visible: speakerRow.isSelected
+                  width: parent.width
+                  from: 0
+                  to: 100
+                  stepSize: 5
+                  value: modelData.volume !== undefined ? modelData.volume : 100
+                  onMoved: {
+                    if (root.hostWidget && root.hostWidget.setHomepodVolume) {
+                      root.hostWidget.setHomepodVolume(modelData.id, value)
+                    }
                   }
                 }
               }
