@@ -159,59 +159,62 @@ Panel {
                     }
                   }
 
-                  Row {
-                    anchors.fill: parent
-                    spacing: Style.spacing.lg
+                  Text {
+                    id: speakerGlyph
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "󰓃"
+                    color: speakerRow.isSelected ? Color.accent : root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.icon
+                  }
+
+                  Column {
+                    anchors.left: speakerGlyph.right
+                    anchors.leftMargin: Style.spacing.lg
+                    anchors.right: checkmarkBox.left
+                    anchors.rightMargin: Style.spacing.lg
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Style.spacing.xxs
 
                     Text {
-                      anchors.verticalCenter: parent.verticalCenter
-                      text: "󰓃"
+                      width: parent.width
+                      text: modelData.name || "HomePod"
+                      color: root.foreground
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.body
+                      font.bold: speakerRow.isSelected
+                      elide: Text.ElideRight
+                    }
+
+                    Text {
+                      width: parent.width
+                      text: modelData.type + (speakerRow.isSelected ? (" • " + (modelData.volume || 100) + "%") : "")
                       color: speakerRow.isSelected ? Color.accent : root.dim
                       font.family: root.fontFamily
-                      font.pixelSize: Style.font.icon
+                      font.pixelSize: Style.font.caption
+                      elide: Text.ElideRight
                     }
+                  }
 
-                    Column {
-                      anchors.verticalCenter: parent.verticalCenter
-                      width: parent.width - Style.space(90)
-                      spacing: Style.spacing.xxs
+                  Rectangle {
+                    id: checkmarkBox
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Style.space(20)
+                    height: Style.space(20)
+                    radius: Style.space(10)
+                    color: speakerRow.isSelected ? Color.accent : "transparent"
+                    border.color: speakerRow.isSelected ? Color.accent : root.dim
+                    border.width: 1.5
 
-                      Text {
-                        text: modelData.name || "HomePod"
-                        color: root.foreground
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.body
-                        font.bold: speakerRow.isSelected
-                        elide: Text.ElideRight
-                        width: parent.width
-                      }
-
-                      Text {
-                        text: modelData.type + (speakerRow.isSelected ? (" • " + (modelData.volume || 100) + "%") : "")
-                        color: speakerRow.isSelected ? Color.accent : root.dim
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.caption
-                      }
-                    }
-
-                    Rectangle {
-                      anchors.verticalCenter: parent.verticalCenter
-                      anchors.right: parent.right
-                      width: Style.space(20)
-                      height: Style.space(20)
-                      radius: Style.space(10)
-                      color: speakerRow.isSelected ? Color.accent : "transparent"
-                      border.color: speakerRow.isSelected ? Color.accent : root.dim
-                      border.width: 1.5
-
-                      Text {
-                        anchors.centerIn: parent
-                        visible: speakerRow.isSelected
-                        text: "✓"
-                        color: "#ffffff"
-                        font.pixelSize: 10
-                        font.bold: true
-                      }
+                    Text {
+                      anchors.centerIn: parent
+                      visible: speakerRow.isSelected
+                      text: "✓"
+                      color: "#ffffff"
+                      font.pixelSize: 10
+                      font.bold: true
                     }
                   }
                 }
