@@ -13,6 +13,8 @@ Panel {
   property var hostWidget: null
   readonly property var barIdentity: hostWidget || root
 
+  property var homepodOutputs: []
+  property int homepodActiveCount: 0
   property var receivers: []
   property string selectedName: ""
   property string selectedAddress: ""
@@ -112,7 +114,150 @@ Panel {
           PanelSeparator { foreground: root.foreground }
 
           PanelSectionHeader {
-            text: root.t("receivers")
+            text: "HomePods & Audio (AirPlay 2)"
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+          }
+
+          Repeater {
+            model: root.homepodOutputs
+
+            delegate: Rectangle {
+              id: speakerRow
+              required property var modelData
+              readonly property bool isSelected: modelData.selected === true
+
+              width: contentColumn.width
+              height: Style.space(48)
+              radius: Style.cornerRadius
+              color: isSelected ? Style.hoverFillFor(Color.accent, root.foreground) : (rowClick.containsMouse ? Style.hoverFillFor(root.foreground, root.foreground) : "transparent")
+              border.color: isSelected ? Color.accent : "transparent"
+              border.width: isSelected ? 1 : 0
+
+              MouseArea {
+                id: rowClick
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  if (root.hostWidget && root.hostWidget.toggleHomepod) {
+                    root.hostWidget.toggleHomepod(modelData.id)
+                  }
+                }
+              }
+
+              Row {
+                anchors.fill: parent
+                anchors.margins: Style.spacing.rowPaddingX
+                spacing: Style.spacing.lg
+
+                Text {
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: "󰓃"
+                  color: speakerRow.isSelected ? Color.accent : root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.icon
+                }
+
+                Column {
+                  anchors.verticalCenter: parent.verticalCenter
+                  width: parent.width - Style.space(90)
+                  spacing: Style.spacing.xxs
+
+                  Text {
+                    text: modelData.name || "HomePod"
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: speakerRow.isSelected
+                    elide: Text.ElideRight
+                    width: parent.width
+                  }
+
+                  Text {
+                    text: modelData.type + (speakerRow.isSelected ? " • Active" : "")
+                    color: speakerRow.isSelected ? Color.accent : root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                  }
+                }
+
+                Rectangle {
+                  anchors.verticalCenter: parent.verticalCenter
+                  width: Style.space(20)
+                  height: Style.space(20)
+                  radius: Style.space(10)
+                  color: speakerRow.isSelected ? Color.accent : "transparent"
+                  border.color: speakerRow.isSelected ? Color.accent : root.dim
+                  border.width: 1.5
+
+                  Text {
+                    anchors.centerIn: parent
+                    visible: speakerRow.isSelected
+                    text: "✓"
+                    color: "#ffffff"
+                    font.pixelSize: 10
+                    font.bold: true
+                  }
+                }
+              }
+            }
+          }
+
+          Row {
+            width: parent.width
+            spacing: Style.spacing.sm
+
+            Button {
+              width: (parent.width - Style.spacing.sm) / 2
+              text: "Select All"
+              onClicked: {
+                if (root.hostWidget && root.hostWidget.enableAllHomepods) {
+                  root.hostWidget.enableAllHomepods()
+                }
+              }
+            }
+
+            Button {
+              width: (parent.width - Style.spacing.sm) / 2
+              text: "Turn Off All"
+              onClicked: {
+                if (root.hostWidget && root.hostWidget.disableAllHomepods) {
+                  root.hostWidget.disableAllHomepods()
+                }
+                Quickshell.execDetached(["pactl", "set-default-sink", "alsa_output.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__Speaker__sink"])
+                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", "Audio Output", "Switched to Laptop Speakers"])
+              }
+            }
+          }
+
+          Row {
+            width: parent.width
+            spacing: Style.spacing.sm
+
+            Button {
+              width: (parent.width - Style.spacing.sm) / 2
+              text: "Use HomePods"
+              onClicked: {
+                Quickshell.execDetached(["wpctl", "set-default", "HomePods"])
+                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", "Audio Output", "Switched to Apple HomePods"])
+              }
+            }
+
+            Button {
+              width: (parent.width - Style.spacing.sm) / 2
+              text: "Use Laptop Speakers"
+              onClicked: {
+                Quickshell.execDetached(["pactl", "set-default-sink", "alsa_output.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__Speaker__sink"])
+                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", "Audio Output", "Switched to Laptop Speakers"])
+              }
+            }
+          }
+
+          PanelSeparator { foreground: root.foreground }
+
+          PanelSectionHeader {
+            text: root.t("receivers") + " (Screen Mirroring)"
             foreground: root.foreground
             fontFamily: root.fontFamily
           }

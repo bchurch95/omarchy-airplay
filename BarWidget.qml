@@ -32,11 +32,88 @@ BarWidget {
   readonly property bool mirroring: mirrorProcess.running
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
 
+  property var homepodOutputs: []
+  property int homepodActiveCount: 0
+
   readonly property var mirroredProperties: [
     "bar", "settings", "receivers", "selectedName", "selectedAddress",
     "selectedDeviceId", "pairingRequired", "pairingPromptActive", "discoveryError", "streamError", "mirroring",
-    "networkDescription", "firewallError", "firewallManaged"
+    "networkDescription", "firewallError", "firewallManaged", "homepodOutputs", "homepodActiveCount"
   ]
+
+  function refreshHomepods() {
+    var xhr = new XMLHttpRequest()
+    xhr.open("GET", "http://localhost:3689/api/outputs", true)
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+        try {
+          var res = JSON.parse(xhr.responseText)
+          if (res && res.outputs) {
+            var count = 0
+            var list = []
+            for (var i = 0; i < res.outputs.length; i++) {
+              var out = res.outputs[i]
+              if (out.id !== "0") {
+                list.push(out)
+                if (out.selected) count++
+              }
+            }
+            root.homepodOutputs = list
+            root.homepodActiveCount = count
+            root.injectPanel()
+          }
+        } catch (e) {}
+      }
+    }
+    xhr.send()
+  }
+
+  function toggleHomepod(id) {
+    for (var i = 0; i < root.homepodOutputs.length; i++) {
+      if (root.homepodOutputs[i].id === id) {
+        root.homepodOutputs[i].selected = !root.homepodOutputs[i].selected
+      }
+    }
+    root.injectPanel()
+    var xhr = new XMLHttpRequest()
+    xhr.open("PUT", "http://localhost:3689/api/outputs/" + id + "/toggle", true)
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === XMLHttpRequest.DONE) {
+        root.refreshHomepods()
+      }
+    }
+    xhr.send()
+  }
+
+  function enableAllHomepods() {
+    var ids = []
+    for (var i = 0; i < root.homepodOutputs.length; i++) {
+      ids.push(root.homepodOutputs[i].id)
+      root.homepodOutputs[i].selected = true
+    }
+    root.injectPanel()
+    var xhr = new XMLHttpRequest()
+    xhr.open("PUT", "http://localhost:3689/api/outputs/set", true)
+    xhr.setRequestHeader("Content-Type", "application/json")
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === XMLHttpRequest.DONE) root.refreshHomepods()
+    }
+    xhr.send(JSON.stringify({ outputs: ids }))
+  }
+
+  function disableAllHomepods() {
+    for (var i = 0; i < root.homepodOutputs.length; i++) {
+      root.homepodOutputs[i].selected = false
+    }
+    root.injectPanel()
+    var xhr = new XMLHttpRequest()
+    xhr.open("PUT", "http://localhost:3689/api/outputs/set", true)
+    xhr.setRequestHeader("Content-Type", "application/json")
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === XMLHttpRequest.DONE) root.refreshHomepods()
+    }
+    xhr.send(JSON.stringify({ outputs: [] }))
+  }
 
   function boolSetting(key, fallback) {
     var value = root.setting(key, fallback)
@@ -65,6 +142,7 @@ BarWidget {
     if (panelLoader.item) panelLoader.item.open()
     root.discover()
     root.refreshNetwork()
+    root.refreshHomepods()
   }
 
   function close() {
@@ -519,18 +597,26 @@ BarWidget {
     }
   }
 
+  Timer {
+    interval: 3000
+    running: true
+    repeat: true
+    triggeredOnStart: true
+    onTriggered: root.refreshHomepods()
+  }
+
   BarIconButton {
     id: button
     anchors.fill: parent
     bar: root.bar
     text: "󰐨"
-    active: root.mirroring
-    dimmed: !root.mirroring
+    active: root.mirroring || root.homepodActiveCount > 0
+    dimmed: !root.mirroring && root.homepodActiveCount === 0
     slotSize: Style.bar.statusSlot
     fontSize: Style.font.icon
     tooltipText: root.mirroring
       ? root.t("tooltipMirroring", { name: root.selectedName })
-      : root.t("tooltipChoose")
+      : (root.homepodActiveCount > 0 ? ("HomePods (" + root.homepodActiveCount + " streaming)") : "AirPlay (Screen & HomePods)")
     onPressed: function(mouseButton) {
       root.togglePanel()
     }
