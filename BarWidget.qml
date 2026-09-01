@@ -69,16 +69,15 @@ BarWidget {
   }
 
   function toggleHomepod(id) {
-    var willBeSelected = false
     var anyActive = false
     for (var i = 0; i < root.homepodOutputs.length; i++) {
       if (root.homepodOutputs[i].id === id) {
         root.homepodOutputs[i].selected = !root.homepodOutputs[i].selected
-        willBeSelected = root.homepodOutputs[i].selected
       }
       if (root.homepodOutputs[i].selected) anyActive = true
     }
     root.injectPanel()
+
     var xhr = new XMLHttpRequest()
     xhr.open("PUT", "http://localhost:3689/api/outputs/" + id + "/toggle", true)
     xhr.onreadystatechange = function() {
@@ -90,13 +89,7 @@ BarWidget {
 
     if (anyActive) {
       Quickshell.execDetached([root.ctlPath, "set-sink", "homepods"])
-      var pXhr = new XMLHttpRequest()
-      pXhr.open("PUT", "http://localhost:3689/api/player/play", true)
-      pXhr.send()
     } else {
-      var sXhr = new XMLHttpRequest()
-      sXhr.open("PUT", "http://localhost:3689/api/player/stop", true)
-      sXhr.send()
       Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
     }
   }
@@ -104,10 +97,14 @@ BarWidget {
   function enableAllHomepods() {
     var ids = []
     for (var i = 0; i < root.homepodOutputs.length; i++) {
-      ids.push(root.homepodOutputs[i].id)
-      root.homepodOutputs[i].selected = true
+      var name = root.homepodOutputs[i].name || ""
+      if (name.indexOf("ATV") === -1 && name.indexOf("MacBook") === -1 && name.indexOf("Test") === -1) {
+        ids.push(root.homepodOutputs[i].id)
+        root.homepodOutputs[i].selected = true
+      }
     }
     root.injectPanel()
+
     var xhr = new XMLHttpRequest()
     xhr.open("PUT", "http://localhost:3689/api/outputs/set", true)
     xhr.setRequestHeader("Content-Type", "application/json")
@@ -116,9 +113,6 @@ BarWidget {
     }
     xhr.send(JSON.stringify({ outputs: ids }))
     Quickshell.execDetached([root.ctlPath, "set-sink", "homepods"])
-    var pXhr = new XMLHttpRequest()
-    pXhr.open("PUT", "http://localhost:3689/api/player/play", true)
-    pXhr.send()
   }
 
   function disableAllHomepods() {
@@ -126,6 +120,7 @@ BarWidget {
       root.homepodOutputs[i].selected = false
     }
     root.injectPanel()
+
     var xhr = new XMLHttpRequest()
     xhr.open("PUT", "http://localhost:3689/api/outputs/set", true)
     xhr.setRequestHeader("Content-Type", "application/json")
@@ -133,9 +128,6 @@ BarWidget {
       if (xhr.readyState === XMLHttpRequest.DONE) root.refreshHomepods()
     }
     xhr.send(JSON.stringify({ outputs: [] }))
-    var sXhr = new XMLHttpRequest()
-    sXhr.open("PUT", "http://localhost:3689/api/player/stop", true)
-    sXhr.send()
     Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
   }
 
