@@ -69,9 +69,11 @@ BarWidget {
   }
 
   function toggleHomepod(id) {
+    var willBeSelected = false
     for (var i = 0; i < root.homepodOutputs.length; i++) {
       if (root.homepodOutputs[i].id === id) {
         root.homepodOutputs[i].selected = !root.homepodOutputs[i].selected
+        willBeSelected = root.homepodOutputs[i].selected
       }
     }
     root.injectPanel()
@@ -83,6 +85,10 @@ BarWidget {
       }
     }
     xhr.send()
+
+    if (willBeSelected) {
+      Quickshell.execDetached([root.ctlPath, "set-sink", "homepods"])
+    }
   }
 
   function enableAllHomepods() {
@@ -99,6 +105,7 @@ BarWidget {
       if (xhr.readyState === XMLHttpRequest.DONE) root.refreshHomepods()
     }
     xhr.send(JSON.stringify({ outputs: ids }))
+    Quickshell.execDetached([root.ctlPath, "set-sink", "homepods"])
   }
 
   function disableAllHomepods() {
@@ -113,6 +120,7 @@ BarWidget {
       if (xhr.readyState === XMLHttpRequest.DONE) root.refreshHomepods()
     }
     xhr.send(JSON.stringify({ outputs: [] }))
+    Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
   }
 
   function boolSetting(key, fallback) {

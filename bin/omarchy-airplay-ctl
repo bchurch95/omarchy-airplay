@@ -167,6 +167,33 @@ clear_restore() {
 
 case "${1:-}" in
   discover)
+set_sink() {
+  local target="${1:-homepods}"
+  local target_sink=""
+  if [[ "$target" == "homepods" ]]; then
+    target_sink="HomePods"
+    pactl set-default-sink "$target_sink" 2>/dev/null || wpctl set-default HomePods 2>/dev/null || true
+  else
+    target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods/ { print $2; exit }')"
+    if [[ -n "$target_sink" ]]; then
+      pactl set-default-sink "$target_sink" 2>/dev/null || true
+    fi
+  fi
+
+  if [[ -n "$target_sink" ]]; then
+    for input in $(pactl list sink-inputs short 2>/dev/null | cut -f1); do
+      # Avoid moving our internal parec bridge itself
+      local name
+      name="$(pactl list sink-inputs 2>/dev/null | grep -B 20 "Sink Input #$input" | grep "application.name" | cut -d'=' -f2 | tr -d ' "' || true)"
+      if [[ "$name" != "parec" ]]; then
+        pactl move-sink-input "$input" "$target_sink" 2>/dev/null || true
+      fi
+    done
+  fi
+}
+
+case "$1" in
+  discover)
     [[ $# -eq 1 ]] || usage
     discover
     ;;
@@ -183,39 +210,6 @@ case "${1:-}" in
     if [[ -f "$target_file" ]]; then
       rm -- "$target_file"
     fi
-    ;;
-  paired)
-    shift
-    paired "$@"
-set_sink() {
-  local target="${1:-homepods}"
-  if [[ "$target" == "homepods" ]]; then
-    wpctl set-default HomePods 2>/dev/null || pactl set-default-sink HomePods 2>/dev/null || true
-  else
-    local default_sink
-    default_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods/ { print $2; exit }')"
-    if [[ -n "$default_sink" ]]; then
-      pactl set-default-sink "$default_sink" 2>/dev/null || true
-    fi
-  fi
-}
-
-case "$1" in
-  discover)
-    [[ $# -eq 1 ]] || usage
-    discover
-    ;;
-  load)
-    [[ $# -eq 1 ]] || usage
-    load
-    ;;
-  save)
-    shift
-    save "$@"
-    ;;
-  clear)
-    [[ $# -eq 1 ]] || usage
-    clear_target
     ;;
   paired)
     shift
