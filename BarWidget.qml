@@ -70,11 +70,13 @@ BarWidget {
 
   function toggleHomepod(id) {
     var willBeSelected = false
+    var anyActive = false
     for (var i = 0; i < root.homepodOutputs.length; i++) {
       if (root.homepodOutputs[i].id === id) {
         root.homepodOutputs[i].selected = !root.homepodOutputs[i].selected
         willBeSelected = root.homepodOutputs[i].selected
       }
+      if (root.homepodOutputs[i].selected) anyActive = true
     }
     root.injectPanel()
     var xhr = new XMLHttpRequest()
@@ -86,8 +88,10 @@ BarWidget {
     }
     xhr.send()
 
-    if (willBeSelected) {
+    if (anyActive) {
       Quickshell.execDetached([root.ctlPath, "set-sink", "homepods"])
+    } else {
+      Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
     }
   }
 

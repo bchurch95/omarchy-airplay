@@ -165,8 +165,6 @@ clear_restore() {
   mv "$temporary" "$credentials_file"
 }
 
-case "${1:-}" in
-  discover)
 set_sink() {
   local target="${1:-homepods}"
   local target_sink=""
