@@ -216,16 +216,18 @@ Panel {
                   }
                 }
 
-                Slider {
+                PanelSlider {
                   visible: speakerRow.isSelected
+                  bar: root.bar
                   width: parent.width
-                  from: 0
-                  to: 100
-                  stepSize: 5
+                  minimum: 0
+                  maximum: 100
+                  step: 5
+                  integer: true
                   value: modelData.volume !== undefined ? modelData.volume : 100
-                  onMoved: {
+                  onMoved: function(v) {
                     if (root.hostWidget && root.hostWidget.setHomepodVolume) {
-                      root.hostWidget.setHomepodVolume(modelData.id, value)
+                      root.hostWidget.setHomepodVolume(modelData.id, Math.round(v))
                     }
                   }
                 }
