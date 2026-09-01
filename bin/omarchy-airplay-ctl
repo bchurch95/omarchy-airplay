@@ -187,6 +187,39 @@ case "${1:-}" in
   paired)
     shift
     paired "$@"
+set_sink() {
+  local target="${1:-homepods}"
+  if [[ "$target" == "homepods" ]]; then
+    wpctl set-default HomePods 2>/dev/null || pactl set-default-sink HomePods 2>/dev/null || true
+  else
+    local default_sink
+    default_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods/ { print $2; exit }')"
+    if [[ -n "$default_sink" ]]; then
+      pactl set-default-sink "$default_sink" 2>/dev/null || true
+    fi
+  fi
+}
+
+case "$1" in
+  discover)
+    [[ $# -eq 1 ]] || usage
+    discover
+    ;;
+  load)
+    [[ $# -eq 1 ]] || usage
+    load
+    ;;
+  save)
+    shift
+    save "$@"
+    ;;
+  clear)
+    [[ $# -eq 1 ]] || usage
+    clear_target
+    ;;
+  paired)
+    shift
+    paired "$@"
     ;;
   forget)
     shift
@@ -211,6 +244,10 @@ case "${1:-}" in
   firewall-clear)
     shift
     firewall_clear "$@"
+    ;;
+  set-sink)
+    shift
+    set_sink "$@"
     ;;
   *)
     usage

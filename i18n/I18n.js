@@ -41,7 +41,13 @@ var messages = {
     firewallAllowFailed: "Could not add the UFW rule. Check that UFW and Polkit are available, then try again.",
     firewallRemoveFailed: "The UFW rule was not removed, so the receiver pairing was kept.",
     tooltipMirroring: "AirPlay mirroring to {name}",
-    tooltipChoose: "Choose an AirPlay receiver"
+    tooltipChoose: "Choose an AirPlay receiver",
+    homepodsHeader: "HomePods & Audio (AirPlay 2)",
+    selectAll: "Select All",
+    turnOffAll: "Turn Off All",
+    useHomepods: "Use HomePods",
+    useSpeakers: "Use Speakers",
+    audioOutputSwitched: "Audio output switched"
   },
   nb: {
     airplayMirror: "AirPlay-speiling",
@@ -83,7 +89,13 @@ var messages = {
     firewallAllowFailed: "Kunne ikke legge til UFW-regelen. Sjekk at UFW og Polkit er tilgjengelige, og prøv igjen.",
     firewallRemoveFailed: "UFW-regelen ble ikke fjernet, så mottakerparingen ble beholdt.",
     tooltipMirroring: "AirPlay-speiling til {name}",
-    tooltipChoose: "Velg en AirPlay-mottaker"
+    tooltipChoose: "Velg en AirPlay-mottaker",
+    homepodsHeader: "HomePod-er og lyd (AirPlay 2)",
+    selectAll: "Velg alle",
+    turnOffAll: "Slå av alle",
+    useHomepods: "Bruk HomePod-er",
+    useSpeakers: "Bruk høyttalere",
+    audioOutputSwitched: "Lydutgang endret"
   }
 }
 

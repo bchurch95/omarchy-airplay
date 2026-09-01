@@ -111,10 +111,11 @@ Panel {
             wrapMode: Text.WordWrap
           }
 
-          PanelSeparator { foreground: root.foreground }
+          PanelSeparator { visible: root.homepodOutputs.length > 0; foreground: root.foreground }
 
           PanelSectionHeader {
-            text: "HomePods & Audio (AirPlay 2)"
+            visible: root.homepodOutputs.length > 0
+            text: root.t("homepodsHeader")
             foreground: root.foreground
             fontFamily: root.fontFamily
           }
@@ -205,12 +206,13 @@ Panel {
           }
 
           Row {
+            visible: root.homepodOutputs.length > 0
             width: parent.width
             spacing: Style.spacing.sm
 
             Button {
               width: (parent.width - Style.spacing.sm) / 2
-              text: "Select All"
+              text: root.t("selectAll")
               onClicked: {
                 if (root.hostWidget && root.hostWidget.enableAllHomepods) {
                   root.hostWidget.enableAllHomepods()
@@ -220,36 +222,43 @@ Panel {
 
             Button {
               width: (parent.width - Style.spacing.sm) / 2
-              text: "Turn Off All"
+              text: root.t("turnOffAll")
               onClicked: {
                 if (root.hostWidget && root.hostWidget.disableAllHomepods) {
                   root.hostWidget.disableAllHomepods()
                 }
-                Quickshell.execDetached(["pactl", "set-default-sink", "alsa_output.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__Speaker__sink"])
-                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", "Audio Output", "Switched to Laptop Speakers"])
+                if (root.hostWidget && root.hostWidget.ctlPath) {
+                  Quickshell.execDetached([root.hostWidget.ctlPath, "set-sink", "default"])
+                }
+                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", root.t("audioOutputSwitched"), root.t("useSpeakers")])
               }
             }
           }
 
           Row {
+            visible: root.homepodOutputs.length > 0
             width: parent.width
             spacing: Style.spacing.sm
 
             Button {
               width: (parent.width - Style.spacing.sm) / 2
-              text: "Use HomePods"
+              text: root.t("useHomepods")
               onClicked: {
-                Quickshell.execDetached(["wpctl", "set-default", "HomePods"])
-                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", "Audio Output", "Switched to Apple HomePods"])
+                if (root.hostWidget && root.hostWidget.ctlPath) {
+                  Quickshell.execDetached([root.hostWidget.ctlPath, "set-sink", "homepods"])
+                }
+                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", root.t("audioOutputSwitched"), root.t("useHomepods")])
               }
             }
 
             Button {
               width: (parent.width - Style.spacing.sm) / 2
-              text: "Use Laptop Speakers"
+              text: root.t("useSpeakers")
               onClicked: {
-                Quickshell.execDetached(["pactl", "set-default-sink", "alsa_output.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.HiFi__Speaker__sink"])
-                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", "Audio Output", "Switched to Laptop Speakers"])
+                if (root.hostWidget && root.hostWidget.ctlPath) {
+                  Quickshell.execDetached([root.hostWidget.ctlPath, "set-sink", "default"])
+                }
+                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", root.t("audioOutputSwitched"), root.t("useSpeakers")])
               }
             }
           }
@@ -257,7 +266,7 @@ Panel {
           PanelSeparator { foreground: root.foreground }
 
           PanelSectionHeader {
-            text: root.t("receivers") + " (Screen Mirroring)"
+            text: root.t("receivers")
             foreground: root.foreground
             fontFamily: root.fontFamily
           }
