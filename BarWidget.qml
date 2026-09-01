@@ -90,7 +90,13 @@ BarWidget {
 
     if (anyActive) {
       Quickshell.execDetached([root.ctlPath, "set-sink", "homepods"])
+      var pXhr = new XMLHttpRequest()
+      pXhr.open("PUT", "http://localhost:3689/api/player/play", true)
+      pXhr.send()
     } else {
+      var sXhr = new XMLHttpRequest()
+      sXhr.open("PUT", "http://localhost:3689/api/player/stop", true)
+      sXhr.send()
       Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
     }
   }
@@ -110,6 +116,9 @@ BarWidget {
     }
     xhr.send(JSON.stringify({ outputs: ids }))
     Quickshell.execDetached([root.ctlPath, "set-sink", "homepods"])
+    var pXhr = new XMLHttpRequest()
+    pXhr.open("PUT", "http://localhost:3689/api/player/play", true)
+    pXhr.send()
   }
 
   function disableAllHomepods() {
@@ -124,6 +133,9 @@ BarWidget {
       if (xhr.readyState === XMLHttpRequest.DONE) root.refreshHomepods()
     }
     xhr.send(JSON.stringify({ outputs: [] }))
+    var sXhr = new XMLHttpRequest()
+    sXhr.open("PUT", "http://localhost:3689/api/player/stop", true)
+    sXhr.send()
     Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
   }
 
