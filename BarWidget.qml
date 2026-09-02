@@ -350,6 +350,9 @@ BarWidget {
   function launchStream(pairCode) {
     root.streamError = ""
     root.deliberateStop = false
+    if (root.boolSetting("audio", true)) {
+      Quickshell.execDetached([root.ctlPath, "set-sink", "homepods"])
+    }
     mirrorProcess.command = root.streamCommand(pairCode || "")
     mirrorProcess.running = true
     root.notify(root.t("mirroringTitle"), root.t("connecting", { name: root.selectedName }))
@@ -380,6 +383,7 @@ BarWidget {
     root.deliberateStop = true
     mirrorProcess.running = false
     Quickshell.execDetached(["killall", "doubletake"])
+    Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
     if (!silent) root.notify(root.t("mirroringTitle"), root.t("stopped", { name: root.selectedName }))
     root.injectPanel()
     return "stopping"
@@ -619,6 +623,7 @@ BarWidget {
         root.streamError = root.t("connectionFailed", { code: code })
         root.notify(root.t("connectionFailedTitle"), root.streamError)
       }
+      Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
       mirrorProcess.errText = ""
       root.injectPanel()
     }
