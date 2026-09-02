@@ -92,6 +92,9 @@ BarWidget {
 
     var xhr = new XMLHttpRequest()
     xhr.open("PUT", "http://localhost:3689/api/outputs/" + id + "/toggle", true)
+    xhr.timeout = 2500
+    xhr.ontimeout = function() { root.refreshHomepods() }
+    xhr.onerror = function() { root.refreshHomepods() }
     xhr.onreadystatechange = function() {
       if (xhr.readyState === XMLHttpRequest.DONE) {
         root.refreshHomepods()
@@ -113,7 +116,7 @@ BarWidget {
     var ids = []
     for (var i = 0; i < root.homepodOutputs.length; i++) {
       var name = root.homepodOutputs[i].name || ""
-      if (name.indexOf("ATV") === -1 && name.indexOf("MacBook") === -1 && name.indexOf("Test") === -1) {
+      if (name.indexOf("ATV") === -1 && name.indexOf("MacBook") === -1 && name.indexOf("Test") === -1 && name.indexOf("Bar") === -1) {
         ids.push(root.homepodOutputs[i].id)
         root.homepodOutputs[i].selected = true
       }
@@ -122,7 +125,10 @@ BarWidget {
 
     var xhr = new XMLHttpRequest()
     xhr.open("PUT", "http://localhost:3689/api/outputs/set", true)
+    xhr.timeout = 3000
     xhr.setRequestHeader("Content-Type", "application/json")
+    xhr.ontimeout = function() { root.refreshHomepods() }
+    xhr.onerror = function() { root.refreshHomepods() }
     xhr.onreadystatechange = function() {
       if (xhr.readyState === XMLHttpRequest.DONE) root.refreshHomepods()
     }
