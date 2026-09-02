@@ -77,7 +77,7 @@
         "min": 15,
         "max": 60,
         "step": 5,
-        "defaultValue": 30
+        "defaultValue": 60
       },
       {
         "key": "targetLatencyMs",

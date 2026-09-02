@@ -340,7 +340,7 @@ BarWidget {
     command.push("-port-range", String(root.setting("portRange", "60000-60010")))
     command.push("-video-codec", String(root.setting("videoCodec", "h264")))
     command.push("-hwaccel", String(root.setting("hardwareEncoder", "auto")))
-    command.push("-fps", String(root.setting("fps", 30)))
+    command.push("-fps", String(root.setting("fps", 60)))
     command.push("-target-latency-ms", String(root.setting("targetLatencyMs", 0)))
     if (!root.boolSetting("audio", true)) command.push("-no-audio")
     if (pairCode !== "") command.push("-pair", "-code", pairCode)
