@@ -131,9 +131,14 @@ Panel {
               width: contentColumn.width
               implicitHeight: speakerContent.implicitHeight + Style.spacing.sm * 2
               radius: Style.cornerRadius
+              scale: rowClick.pressed ? 0.985 : 1.0
               color: isSelected ? Style.hoverFillFor(Color.accent, root.foreground) : (rowClick.containsMouse ? Style.hoverFillFor(root.foreground, root.foreground) : "transparent")
               border.color: isSelected ? Color.accent : "transparent"
               border.width: isSelected ? 1 : 0
+
+              Behavior on scale { NumberAnimation { duration: 75; easing.type: Easing.OutQuad } }
+              Behavior on color { ColorAnimation { duration: 75 } }
+              Behavior on border.color { ColorAnimation { duration: 75 } }
 
               Column {
                 id: speakerContent
