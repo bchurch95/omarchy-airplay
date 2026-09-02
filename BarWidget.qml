@@ -31,6 +31,7 @@ BarWidget {
   property bool pairingAttemptInFlight: false
 
   readonly property bool mirroring: mirrorProcess.running
+  readonly property bool discovering: discoverProcess.running
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
 
   property var homepodOutputs: []
@@ -38,7 +39,7 @@ BarWidget {
 
   readonly property var mirroredProperties: [
     "bar", "settings", "receivers", "selectedName", "selectedAddress",
-    "selectedDeviceId", "selectedProtocol", "pairingRequired", "pairingPromptActive", "discoveryError", "streamError", "mirroring",
+    "selectedDeviceId", "selectedProtocol", "pairingRequired", "pairingPromptActive", "discoveryError", "streamError", "mirroring", "discovering",
     "networkDescription", "firewallError", "firewallManaged", "homepodOutputs", "homepodActiveCount"
   ]
 

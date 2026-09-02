@@ -27,6 +27,7 @@ Panel {
   property string networkDescription: ""
   property string firewallError: ""
   property bool firewallManaged: false
+  property bool discovering: false
 
   // Main navigation tabs: "screens" | "miracast" | "audio"
   property string mainTab: "screens"
@@ -104,7 +105,16 @@ Panel {
               foreground: root.foreground
               hoverColor: Color.accent
               fontFamily: root.fontFamily
+              enabled: !root.discovering
               onClicked: if (root.hostWidget) root.hostWidget.discover()
+
+              RotationAnimator on rotation {
+                running: root.discovering
+                loops: Animation.Infinite
+                from: 0
+                to: 360
+                duration: 900
+              }
             }
           }
         }
@@ -455,11 +465,58 @@ Panel {
           width: parent.width
           spacing: Style.spacing.panelGap
 
-          Button {
+          Rectangle {
+            id: scanMiracastBtn
             width: parent.width
-            text: "󰑐 Scan for Wi-Fi Direct / Miracast TVs"
-            onClicked: {
-              if (root.hostWidget) root.hostWidget.discover()
+            height: Style.space(36)
+            radius: Style.cornerRadius
+            color: scanMouse.pressed ? Style.hoverFillFor(Color.accent, root.foreground, 0.25) : (scanMouse.containsMouse ? Style.hoverFillFor(Color.accent, root.foreground, 0.15) : (root.discovering ? Style.hoverFillFor(Color.accent, root.foreground, 0.12) : Style.hoverFillFor(root.foreground, root.foreground, 0.08)))
+            border.color: root.discovering ? Color.accent : (scanMouse.containsMouse ? Color.accent : root.dim)
+            border.width: 1
+
+            Behavior on color { ColorAnimation { duration: 150 } }
+            Behavior on border.color { ColorAnimation { duration: 150 } }
+
+            Row {
+              anchors.centerIn: parent
+              spacing: Style.spacing.sm
+
+              Text {
+                id: scanSpinGlyph
+                text: "󰑐"
+                color: root.discovering ? Color.accent : root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.icon
+                anchors.verticalCenter: parent.verticalCenter
+
+                RotationAnimator on rotation {
+                  running: root.discovering
+                  loops: Animation.Infinite
+                  from: 0
+                  to: 360
+                  duration: 800
+                }
+              }
+
+              Text {
+                text: root.discovering ? "Scanning Wi-Fi Direct & Miracast..." : "Scan for Wi-Fi Direct / Miracast TVs"
+                color: root.discovering ? Color.accent : root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                anchors.verticalCenter: parent.verticalCenter
+              }
+            }
+
+            MouseArea {
+              id: scanMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              enabled: !root.discovering
+              cursorShape: root.discovering ? Qt.ArrowCursor : Qt.PointingHandCursor
+              onClicked: {
+                if (root.hostWidget) root.hostWidget.discover()
+              }
             }
           }
 
