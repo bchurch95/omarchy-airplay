@@ -351,7 +351,7 @@ BarWidget {
     root.streamError = ""
     root.deliberateStop = false
     if (root.boolSetting("audio", true)) {
-      Quickshell.execDetached([root.ctlPath, "set-sink", "homepods"])
+      Quickshell.execDetached([root.ctlPath, "set-sink", "airplay"])
     }
     mirrorProcess.command = root.streamCommand(pairCode || "")
     mirrorProcess.running = true
