@@ -223,9 +223,44 @@ set_sink() {
     fi
     target_sink="AirPlay"
   elif [[ "$target" == "homepods" ]]; then
+    if ! pactl list sinks short 2>/dev/null | grep -q "HomePods"; then
+      pactl load-module module-null-sink sink_name=HomePods rate=44100 channels=2 sink_properties=device.description=HomePods 2>/dev/null || true
+    fi
     target_sink="HomePods"
   else
-    target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 ~ /Speaker|analog|Headphones/ { print $2; exit }')"
+    # Restore mode (returning from AirPlay/HomePods)
+    # 1. First attempt: restore previous_sink if it is currently online and not a virtual airplay sink
+    if [[ -f "${state_dir}/previous_sink" ]]; then
+      local prev
+      prev="$(head -n 1 "${state_dir}/previous_sink" 2>/dev/null || true)"
+      if [[ -n "$prev" && "$prev" != "AirPlay" && "$prev" != "HomePods" ]]; then
+        if pactl list sinks short 2>/dev/null | awk '{print $2}' | grep -Fxq "$prev"; then
+          target_sink="$prev"
+        fi
+      fi
+    fi
+
+    # 2. Second attempt: prioritize active Bluetooth audio devices
+    if [[ -z "$target_sink" ]]; then
+      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 ~ /^bluez_output\./ { print $2; exit }')"
+    fi
+
+    # 3. Third attempt: USB / Dock analog audio output
+    if [[ -z "$target_sink" ]]; then
+      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 ~ /^alsa_output\.usb.*analog/ { print $2; exit }')"
+    fi
+
+    # 4. Fourth attempt: Laptop internal speakers / analog output
+    if [[ -z "$target_sink" ]]; then
+      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 ~ /^alsa_output\.pci.*(Speaker|analog)/ { print $2; exit }')"
+    fi
+
+    # 5. Fallback: Any non-virtual and non-HDMI sink
+    if [[ -z "$target_sink" ]]; then
+      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods|AirPlay|HDMI/ { print $2; exit }')"
+    fi
+
+    # 6. Final fallback: Any non-AirPlay sink
     if [[ -z "$target_sink" ]]; then
       target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods|AirPlay/ { print $2; exit }')"
     fi
@@ -241,6 +276,17 @@ set_sink() {
     for input in $(pactl list sink-inputs short 2>/dev/null | cut -f1); do
       pactl move-sink-input "$input" "$target_sink" 2>/dev/null || true
     done
+
+    # If restored to default and sink volume is muted or 0%, unmute and set sensible volume
+    if [[ "$target" == "default" ]]; then
+      rm -f "${state_dir}/previous_sink" 2>/dev/null || true
+      local vol
+      vol="$(pactl get-sink-volume "$target_sink" 2>/dev/null | grep -o '[0-9]\+%' | head -n 1 | tr -d '%' || echo "50")"
+      if [[ -n "$vol" && "$vol" -le 0 ]]; then
+        pactl set-sink-volume "$target_sink" 40% 2>/dev/null || true
+      fi
+      pactl set-sink-mute "$target_sink" 0 2>/dev/null || true
+    fi
   fi
 }
 

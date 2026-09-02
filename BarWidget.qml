@@ -60,9 +60,13 @@ BarWidget {
                 if (out.selected) count++
               }
             }
+            var prevCount = root.homepodActiveCount
             root.homepodOutputs = list
             root.homepodActiveCount = count
             root.injectPanel()
+            if (prevCount > 0 && count === 0 && !root.mirroring) {
+              Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
+            }
           }
         } catch (e) {}
       }
