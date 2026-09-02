@@ -513,54 +513,6 @@ Panel {
               }
             }
           }
-
-          PanelSeparator { visible: root.firewallManaged || root.firewallError !== ""; foreground: root.foreground }
-
-          PanelSectionHeader {
-            visible: root.firewallManaged || root.firewallError !== ""
-            text: root.t("networkAndFirewall")
-            foreground: root.foreground
-            fontFamily: root.fontFamily
-          }
-
-          Text {
-            visible: (root.firewallManaged || root.firewallError !== "") && root.networkDescription !== ""
-            width: parent.width
-            text: root.t("activeNetwork", { network: root.networkDescription })
-            color: root.dim
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            wrapMode: Text.WordWrap
-          }
-
-          Text {
-            visible: root.firewallManaged
-            width: parent.width
-            text: root.t("firewallManaged", { address: root.selectedAddress })
-            color: Color.accent
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            wrapMode: Text.WordWrap
-          }
-
-          Text {
-            visible: root.firewallError !== ""
-            width: parent.width
-            text: root.firewallError
-            color: Color.urgent
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            wrapMode: Text.WordWrap
-          }
-
-          Text {
-            width: parent.width
-            text: root.t("openReceiverList")
-            color: root.dim
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            wrapMode: Text.WordWrap
-          }
         }
       }
     }
