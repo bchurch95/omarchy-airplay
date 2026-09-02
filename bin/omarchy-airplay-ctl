@@ -82,10 +82,13 @@ discover() {
         return result value
       }
       $1 == "=" && $3 == "IPv4" && !seen[$8]++ {
+        txt = $10
+        if (txt ~ /model=AudioAccessory/ || txt ~ /features=0x[0-9A-Fa-f]*00,/ || txt ~ /manufacturer=Sonos/ || txt ~ /model=Shairport/)
+          next
         name = unescape($4)
         device_id = ""
-        if (match($10, /deviceid=[0-9A-Fa-f:]+/))
-          device_id = substr($10, RSTART + 9, RLENGTH - 9)
+        if (match(txt, /deviceid=[0-9A-Fa-f:]+/))
+          device_id = substr(txt, RSTART + 9, RLENGTH - 9)
         print name "\t" $8 "\t" device_id
       }
     ' |

@@ -437,11 +437,49 @@ Panel {
             }
           }
 
+          PanelSeparator { visible: root.selectedAddress !== "" && root.pairingRequired; foreground: root.foreground }
+
           PanelSectionHeader {
-            visible: root.selectedAddress !== "" && root.pairingRequired && root.pairingPromptActive
+            visible: root.selectedAddress !== "" && root.pairingRequired
             text: root.t("pairNewReceiver")
             foreground: root.foreground
             fontFamily: root.fontFamily
+          }
+
+          Text {
+            visible: root.selectedAddress !== "" && root.pairingRequired
+            width: parent.width
+            text: root.t("pinHelp")
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            wrapMode: Text.WordWrap
+          }
+
+          Row {
+            visible: root.selectedAddress !== "" && root.pairingRequired
+            width: parent.width
+            spacing: Style.spacing.sm
+
+            TextField {
+              id: pairingCode
+              width: Style.space(120)
+              placeholderText: root.t("pin")
+              maximumLength: 4
+              inputMethodHints: Qt.ImhDigitsOnly
+              validator: RegularExpressionValidator { regularExpression: /\d{0,4}/ }
+              onAccepted: pairButton.clicked()
+            }
+
+            Button {
+              id: pairButton
+              text: root.t("pairAndConnect")
+              enabled: root.selectedAddress !== "" && pairingCode.text.length === 4
+              onClicked: {
+                if (root.hostWidget) root.hostWidget.pair(pairingCode.text)
+                pairingCode.text = ""
+              }
+            }
           }
 
           PanelSeparator { visible: root.selectedAddress !== ""; foreground: root.foreground }
@@ -489,42 +527,6 @@ Panel {
             visible: root.selectedAddress !== "" && !root.firewallManaged
             text: root.t("allowFirewall")
             onClicked: if (root.hostWidget) root.hostWidget.allowSelectedReceiver()
-          }
-
-          Text {
-            visible: root.selectedAddress !== "" && root.pairingRequired && root.pairingPromptActive
-            width: parent.width
-            text: root.t("pinHelp")
-            color: root.dim
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            wrapMode: Text.WordWrap
-          }
-
-          Row {
-            visible: root.selectedAddress !== "" && root.pairingRequired && root.pairingPromptActive
-            width: parent.width
-            spacing: Style.spacing.sm
-
-            TextField {
-              id: pairingCode
-              width: Style.space(120)
-              placeholderText: root.t("pin")
-              maximumLength: 4
-              inputMethodHints: Qt.ImhDigitsOnly
-              validator: RegularExpressionValidator { regularExpression: /\d{0,4}/ }
-              onAccepted: pairButton.clicked()
-            }
-
-            Button {
-              id: pairButton
-              text: root.t("pairAndConnect")
-              enabled: root.selectedAddress !== "" && pairingCode.text.length === 4
-              onClicked: {
-                if (root.hostWidget) root.hostWidget.pair(pairingCode.text)
-                pairingCode.text = ""
-              }
-            }
           }
 
           Text {

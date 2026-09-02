@@ -82,7 +82,8 @@
         "min": 0,
         "max": 1000,
         "step": 10,
-        "defaultValue": 180
+        "defaultValue": 0,
+        "description": "0 uses automatic AirPlay clock policy for smooth audio/video synchronization."
       },
       {
         "key": "portRange",
@@ -95,14 +96,14 @@
         "key": "audio",
         "type": "boolean",
         "label": "Mirror audio",
-        "defaultValue": false,
-        "description": "Disabled by default while audio support in DoubleTake is experimental."
+        "defaultValue": true,
+        "description": "Enable low-latency desktop audio streaming."
       },
       {
         "key": "alwaysPromptForCapture",
         "type": "boolean",
         "label": "Choose capture source every time",
-        "defaultValue": true,
+        "defaultValue": false,
         "description": "Show the portal's screen/window/region picker for every new mirroring session."
       }
     ]

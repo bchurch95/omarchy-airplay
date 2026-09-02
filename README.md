@@ -36,45 +36,57 @@ cd ~/.config/omarchy/plugins/io.github.etroll.omarchy-airplay
 
 ## Requirements & Prerequisites
 
-- **Omarchy** with `omarchy-shell`
-- **OwnTone Server**: `owntone-server` (AUR)
-- **PipeWire & Pulse Tools**: `pipewire`, `pipewire-pulse`, `pulseaudio-utils` (`parec`), `wireplumber`
-- **Discovery**: `avahi` (`avahi-daemon`)
-- **Screen Mirroring**: `doubletake` (AUR) + GStreamer plugins
+### Core System Packages
+- **Omarchy** with `omarchy-shell` & `hyprland`
+- **Audio & Discovery**: `pipewire`, `pipewire-pulse`, `pulseaudio-utils` (`parec`), `wireplumber`, `avahi` (`avahi-daemon`), `jq`
+- **HomePod AirPlay 2 Multi-Room Server**: `owntone-server` (AUR)
 
-Install base packages:
+### Video & GPU Hardware Acceleration
+- **DoubleTake**: `doubletake` (with AirPlay 2 HAP & Intel QSV support)
+- **GStreamer Core & Media Plugins**: `gst-plugins-good`, `gst-plugins-bad`, `gst-plugin-pipewire`, `gst-plugin-gtk`
+- **Hardware Acceleration**:
+  - **Intel Arc / Lunar Lake / Xe Graphics**: `gst-plugin-qsv`, `onevpl-intel-gpu`, `intel-media-driver`, `libva-utils`
+  - **NVIDIA**: `gst-plugin-nvcodec` / Vulkan
+  - **Software (CPU Fallback)**: OpenH264 SIMD (`openh264enc`)
+
+### Install Packages (Arch / Omarchy)
+
 ```sh
-sudo pacman -S --needed avahi jq pipewire pipewire-pulse pulseaudio-utils wireplumber
+# Core audio, discovery, and GPU hardware encoding
+sudo pacman -S --needed avahi jq pipewire pipewire-pulse pulseaudio-utils wireplumber \
+    libva-utils gst-plugins-good gst-plugins-bad gst-plugin-pipewire \
+    gst-plugin-qsv onevpl-intel-gpu intel-media-driver
+
+# Multi-room HomePod daemon and AirPlay screen mirroring
 yay -S --needed owntone-server doubletake
+
+# Enable system services
 sudo systemctl enable --now avahi-daemon owntone
 ```
-```
 
-Verify the essentials before installing the plugin:
+---
 
+## 📺 Apple TV & AirPlay Configuration Notes
+
+### 1. Apple TV Access Permissions
+To mirror smoothly from Linux to tvOS:
+- On your Apple TV, go to **Settings > AirPlay and HomeKit**.
+- Set **Allow Access** to **"Everyone on the Same Network"** (or *"Anyone on the Same Network"*). If set to "Current User" or "Home Members Only", tvOS may silently reject connection requests from non-Apple devices.
+- Set **Require Code** to **"First Time Only"** or **"Off"**.
+
+### 2. Device Separation
+The status bar widget automatically categorizes network devices:
+- **Screen Mirroring (Video Receivers)**: Automatically filters mDNS TXT records to show only video-capable devices (`Apple TV`, `MacBook Pro`, AirPlay display adapters). Audio-only speakers are excluded from the screen list.
+- **HomePods & Audio (AirPlay 2 Multi-Room)**: Displays all HomePods, Sonos, and AirPlay speakers with individual volume sliders, **Select All**, and **Turn Off All** controls.
+
+### 3. Firewall (UFW)
+DoubleTake uses a local port range (default: `60000:60010`) for reverse timing and event sockets. If you use a firewall like UFW, permit both UDP and TCP traffic for your Apple TV's IP:
 ```sh
-command -v doubletake
-command -v avahi-browse
-systemctl is-active avahi-daemon
+sudo ufw allow in proto udp from <APPLE_TV_IP> to any port 60000:60010
+sudo ufw allow in proto tcp from <APPLE_TV_IP> to any port 60000:60010
 ```
 
-### Firewall
-
-No manual firewall rule is normally required. DoubleTake uses at least three
-local UDP ports for each active receiver; the plugin defaults to
-`60000-60010`.
-
-When UFW blocks incoming media traffic, select the receiver and choose
-**Allow selected receiver** in the widget. The plugin detects the active
-Wi-Fi/Ethernet network and opens the configured UDP range only for that
-receiver's current IPv4 address. Polkit shows the system administrator prompt
-before anything changes.
-
-The plugin records only rules it created and removes that rule when you choose
-**Forget** for the receiver. This is optional and requires `ufw` and `pkexec`
-(Polkit). If UFW or Polkit is unavailable, configure the firewall according to
-your system's documentation instead; do not open the range to untrusted
-networks.
+---
 
 ## Install
 

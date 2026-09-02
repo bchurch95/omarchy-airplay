@@ -53,7 +53,8 @@ BarWidget {
             var list = []
             for (var i = 0; i < res.outputs.length; i++) {
               var out = res.outputs[i]
-              if (out.id !== "0") {
+              var name = out.name || ""
+              if (out.id !== "0" && name.indexOf("MacBook") === -1) {
                 list.push(out)
                 if (out.selected) count++
               }
@@ -222,9 +223,11 @@ BarWidget {
     root.selectedName = name
     root.selectedAddress = address
     root.selectedDeviceId = deviceId || ""
-    root.pairingPromptActive = false
+    root.pairingPromptActive = true
     for (var i = 0; i < root.receivers.length; i++) {
-      if (root.receivers[i].address === address) root.pairingRequired = !root.receivers[i].paired
+      if (root.receivers[i].address === address) {
+        root.pairingRequired = !root.receivers[i].paired
+      }
     }
     saveProcess.command = [root.ctlPath, "save", name, address, root.selectedDeviceId]
     saveProcess.running = true
@@ -250,7 +253,7 @@ BarWidget {
     if (root.selectedDeviceId === "" || root.selectedAddress === "") return "no-receiver"
     root.firewallError = ""
     firewallAllowProcess.command = ["pkexec", "/usr/bin/ufw", "allow", "from", root.selectedAddress,
-      "to", "any", "port", String(root.setting("portRange", "60000-60010")).replace("-", ":"), "proto", "udp"]
+      "to", "any", "port", String(root.setting("portRange", "60000-60010")).replace("-", ":")]
     firewallAllowProcess.running = true
     root.injectPanel()
     return "authorizing-firewall"
@@ -322,8 +325,8 @@ BarWidget {
     command.push("-video-codec", String(root.setting("videoCodec", "h264")))
     command.push("-hwaccel", String(root.setting("hardwareEncoder", "auto")))
     command.push("-fps", String(root.setting("fps", 30)))
-    command.push("-target-latency-ms", String(root.setting("targetLatencyMs", 180)))
-    if (!root.boolSetting("audio", false)) command.push("-no-audio")
+    command.push("-target-latency-ms", String(root.setting("targetLatencyMs", 0)))
+    if (!root.boolSetting("audio", true)) command.push("-no-audio")
     if (pairCode !== "") command.push("-pair", "-code", pairCode)
     return command
   }
@@ -339,7 +342,9 @@ BarWidget {
   }
 
   function start(pairCode) {
-    if (root.mirroring) return "already-running"
+    if (root.mirroring) {
+      root.stop(true)
+    }
     if (clearRestoreProcess.running) return "preparing-capture"
     if (root.selectedAddress === "") {
       root.open()
@@ -347,7 +352,7 @@ BarWidget {
     }
     if ((pairCode || "") === "") root.pairingPromptActive = true
     root.pendingStartPairCode = pairCode || ""
-    if (root.boolSetting("alwaysPromptForCapture", true) && root.selectedDeviceId !== "") {
+    if (root.boolSetting("alwaysPromptForCapture", false) && root.selectedDeviceId !== "") {
       clearRestoreProcess.command = [root.ctlPath, "clear-restore", root.selectedDeviceId]
       clearRestoreProcess.running = true
       return "preparing-capture"
@@ -356,9 +361,9 @@ BarWidget {
   }
 
   function stop(silent) {
-    if (!root.mirroring) return "stopped"
     root.deliberateStop = true
     mirrorProcess.running = false
+    Quickshell.execDetached(["killall", "doubletake"])
     if (!silent) root.notify(root.t("mirroringTitle"), root.t("stopped", { name: root.selectedName }))
     root.injectPanel()
     return "stopping"
@@ -477,7 +482,7 @@ BarWidget {
       firewallLookupForForgetProcess.outText = ""
       if (code !== 0 || fields.length < 3) { root.finishForget(); return }
       firewallRemoveProcess.command = ["pkexec", "/usr/bin/ufw", "--force", "delete", "allow", "from", fields[1],
-        "to", "any", "port", String(fields[2]).replace("-", ":"), "proto", "udp"]
+        "to", "any", "port", String(fields[2]).replace("-", ":")]
       firewallRemoveProcess.running = true
     }
   }
@@ -535,6 +540,7 @@ BarWidget {
     id: pairingCheckProcess
     onExited: function(code) {
       root.pairingRequired = code !== 0
+      if (root.pairingRequired) root.pairingPromptActive = true
       root.injectPanel()
     }
   }

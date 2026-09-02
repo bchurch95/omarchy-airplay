@@ -22,14 +22,21 @@ echo "${BOLD}================================================================${R
 
 # 1. Install Required Packages
 log_info "Step 1/6: Checking and installing required packages..."
-PACKAGES=(pipewire pipewire-pulse pulseaudio-utils jq avahi wireplumber)
+PACKAGES=(pipewire pipewire-pulse pulseaudio-utils jq avahi wireplumber libva-utils gst-plugins-good gst-plugins-bad gst-plugin-pipewire gst-plugin-qsv onevpl-intel-gpu intel-media-driver)
 
 for pkg in "${PACKAGES[@]}"; do
     if ! pacman -Qi "$pkg" >/dev/null 2>&1; then
         log_info "Installing $pkg via pacman..."
-        sudo pacman -S --needed --noconfirm "$pkg"
+        sudo pacman -S --needed --noconfirm "$pkg" || true
     fi
 done
+
+if ! command -v doubletake >/dev/null 2>&1; then
+    log_info "Installing doubletake via AUR/Go..."
+    if command -v yay >/dev/null 2>&1; then
+        yay -S --needed --noconfirm doubletake || true
+    fi
+fi
 
 if ! command -v owntone >/dev/null 2>&1; then
     log_info "Installing owntone via AUR..."
