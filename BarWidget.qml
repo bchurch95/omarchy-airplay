@@ -259,7 +259,7 @@ BarWidget {
   function allowSelectedReceiver() {
     if (root.selectedDeviceId === "" || root.selectedAddress === "") return "no-receiver"
     root.firewallError = ""
-    firewallAllowProcess.command = ["pkexec", "/usr/bin/ufw", "allow", "from", root.selectedAddress,
+    firewallAllowProcess.command = ["pkexec", "/usr/bin/ufw", "allow", "proto", "udp", "from", root.selectedAddress,
       "to", "any", "port", String(root.setting("portRange", "60000-60010")).replace("-", ":")]
     firewallAllowProcess.running = true
     root.injectPanel()
@@ -497,7 +497,7 @@ BarWidget {
       var fields = String(firewallLookupForForgetProcess.outText).trim().split("\t")
       firewallLookupForForgetProcess.outText = ""
       if (code !== 0 || fields.length < 3) { root.finishForget(); return }
-      firewallRemoveProcess.command = ["pkexec", "/usr/bin/ufw", "--force", "delete", "allow", "from", fields[1],
+      firewallRemoveProcess.command = ["pkexec", "/usr/bin/ufw", "--force", "delete", "allow", "proto", "udp", "from", fields[1],
         "to", "any", "port", String(fields[2]).replace("-", ":")]
       firewallRemoveProcess.running = true
     }
