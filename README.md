@@ -1,63 +1,53 @@
-# Omarchy AirPlay Mirror
+# Omarchy AirPlay & HomePod Multi-Room
 
-An Omarchy bar plugin for discovering AirPlay receivers and mirroring a Wayland
-desktop through [DoubleTake](https://github.com/omarroth/doubletake).
+An advanced Omarchy status bar plugin for **Apple HomePod AirPlay 2 Multi-Room Audio Streaming** and **Wayland Desktop Screen Mirroring** through [DoubleTake](https://github.com/omarroth/doubletake).
 
-It is designed for Apple TV and compatible AirPlay receivers on the local
-network. The plugin discovers receivers, keeps a chosen receiver handy, and
-lets you pair, start, stop, or forget a receiver from the Omarchy bar.
+Stream low-latency desktop audio to multiple Apple HomePods and AirPlay speakers synchronously, control room volumes directly from the bar, and mirror your screen to Apple TVs.
 
-![AirPlay Mirror receiver list](preview.png)
+---
 
-## Features
+## 🚀 Quick Setup (One-Command Installer)
 
+To install all prerequisites (OwnTone, PipeWire sinks, FIFO bridge, systemd services) and configure low-latency AirPlay 2:
+
+```bash
+cd ~/.config/omarchy/plugins/io.github.etroll.omarchy-airplay
+./setup-homepod.sh
+```
+
+---
+
+## ✨ Features
+
+### 🎵 Apple HomePod & AirPlay 2 Multi-Room Audio
+- **Multi-Room Synchronized Audio**: Stream system audio to multiple Apple HomePods (Living Room, Bedroom, Kitchen, Bathroom, Nursery, etc.) simultaneously in sync via AirPlay 2 PTP clocks.
+- **Automatic PipeWire Routing**: Selecting a HomePod automatically routes system audio and active applications (YouTube, Spotify, etc.) to the HomePods. Unselecting returns audio seamlessly to laptop speakers.
+- **Native Per-Speaker Volume Sliders**: Smoothly control the amplifier volume of each individual room directly from the status bar popup.
+- **Batch Actions**: One-click "Select All" and "Turn Off All".
+- **Zero Echo / No Local Delay**: Automatically disables local ALSA soundcard double-playback.
+
+### 🖥️ AirPlay Screen Mirroring (Apple TV & Receivers)
 - Discovers AirPlay receivers through mDNS/Avahi.
-- Starts and stops desktop mirroring from the bar.
-- Pairs new receivers with the PIN displayed by the receiver.
-- Lets you select, unselect, and forget individual receivers.
-- Shows the Wayland screen/window/region picker for every new session by
-  default.
-- Supports configurable codec, encoder, FPS, latency, audio, and UDP port
-  range settings.
-- Includes English text and Norwegian Bokmål/Nynorsk locale support.
-- Exposes `io.github.etroll.omarchy-airplay` IPC commands for keybindings and scripts.
+- Starts and stops desktop mirroring from the bar via DoubleTake.
+- Pairs new receivers with on-screen PIN codes.
+- Supports Wayland screen/window/region pickers and configurable FPS/codecs.
 
-## Requirements
+---
 
-This is an Omarchy/Arch Linux plugin. It needs:
+## Requirements & Prerequisites
 
-- Omarchy with a plugin-capable `omarchy-shell`.
-- A working Wayland capture portal. Omarchy normally provides PipeWire and
-  `xdg-desktop-portal-hyprland`.
-- [DoubleTake](https://github.com/omarroth/doubletake), the AirPlay sender.
-- Avahi for receiver discovery, including the `avahi-daemon` service.
-- `jq`, used only to inspect and safely remove an individual saved pairing.
-- GStreamer runtime plugins required by DoubleTake.
-- Optional firewall assistance: `ufw` and Polkit's `pkexec`.
+- **Omarchy** with `omarchy-shell`
+- **OwnTone Server**: `owntone-server` (AUR)
+- **PipeWire & Pulse Tools**: `pipewire`, `pipewire-pulse`, `pulseaudio-utils` (`parec`), `wireplumber`
+- **Discovery**: `avahi` (`avahi-daemon`)
+- **Screen Mirroring**: `doubletake` (AUR) + GStreamer plugins
 
-Install the required repository packages:
-
+Install base packages:
 ```sh
-sudo pacman -S --needed \
-  avahi jq \
-  gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad \
-  gst-plugins-ugly gst-libav \
-  pipewire xdg-desktop-portal xdg-desktop-portal-hyprland
+sudo pacman -S --needed avahi jq pipewire pipewire-pulse pulseaudio-utils wireplumber
+yay -S --needed owntone-server doubletake
+sudo systemctl enable --now avahi-daemon owntone
 ```
-
-Install the stable DoubleTake package from the AUR with your AUR helper:
-
-```sh
-yay -S --needed doubletake
-```
-
-`doubletake-git` is an alternative for users who specifically need the newest
-upstream changes. Do not install it together with `doubletake`.
-
-Enable receiver discovery:
-
-```sh
-sudo systemctl enable --now avahi-daemon
 ```
 
 Verify the essentials before installing the plugin:
