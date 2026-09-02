@@ -394,14 +394,6 @@ BarWidget {
     return "stopping"
   }
 
-  function launchMiracast() {
-    root.discover()
-  }
-
-  function launchFluxcast() {
-    Quickshell.execDetached(["fluxcast", "--tray"])
-  }
-
   function pair(code) {
     var clean = String(code).replace(/\s/g, "")
     if (!/^\d{4}$/.test(clean)) return "invalid-code"

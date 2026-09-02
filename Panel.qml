@@ -455,26 +455,11 @@ Panel {
           width: parent.width
           spacing: Style.spacing.panelGap
 
-          Row {
+          Button {
             width: parent.width
-            spacing: Style.spacing.sm
-
-            Button {
-              width: (parent.width - Style.spacing.sm) / 2
-              text: "󰑐 Scan for TVs"
-              onClicked: {
-                if (root.hostWidget) root.hostWidget.discover()
-              }
-            }
-
-            Button {
-              width: (parent.width - Style.spacing.sm) / 2
-              text: "󰖟 Open FluxCast"
-              onClicked: {
-                if (root.hostWidget && root.hostWidget.launchFluxcast) {
-                  root.hostWidget.launchFluxcast()
-                }
-              }
+            text: "󰑐 Scan for Wi-Fi Direct / Miracast TVs"
+            onClicked: {
+              if (root.hostWidget) root.hostWidget.discover()
             }
           }
 
