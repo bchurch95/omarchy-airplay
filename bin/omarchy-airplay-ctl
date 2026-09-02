@@ -66,9 +66,7 @@ discover() {
     exit 127
   }
 
-  # avahi-browse parsable resolved records are semicolon-separated. Prefer
-  # IPv4 because DoubleTake and receiver firewall rules are easiest to make
-  # predictable with a concrete IPv4 address. De-duplicate by address.
+  # 1. Discover AirPlay video receivers (Apple TV, Mac, etc.)
   avahi-browse --resolve --terminate --parsable _airplay._tcp 2>/dev/null |
     awk -F';' '
       function unescape(value, result, code) {
@@ -89,17 +87,56 @@ discover() {
         device_id = ""
         if (match(txt, /deviceid=[0-9A-Fa-f:]+/))
           device_id = substr(txt, RSTART + 9, RLENGTH - 9)
-        print name "\t" $8 "\t" device_id
+        print name "\t" $8 "\t" device_id "\tairplay"
       }
     ' |
-    while IFS=$'\t' read -r name address device_id; do
+    while IFS=$'\t' read -r name address device_id protocol; do
       paired=0
       if [[ -n "$device_id" && -f "$credentials_file" ]] &&
         jq -e --arg device_id "$device_id" 'has($device_id)' "$credentials_file" >/dev/null 2>&1; then
         paired=1
       fi
-      printf '%s\t%s\t%s\t%s\n' "$name" "$address" "$device_id" "$paired"
+      printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$address" "$device_id" "$paired" "$protocol"
     done
+
+  # 2. Discover Google Cast / Chromecast receivers
+  avahi-browse --resolve --terminate --parsable _googlecast._tcp 2>/dev/null |
+    awk -F';' '
+      function unescape(value, result, code) {
+        result = ""
+        while (match(value, /\\[0-9][0-9][0-9]/)) {
+          result = result substr(value, 1, RSTART - 1)
+          code = substr(value, RSTART + 1, 3) + 0
+          result = result sprintf("%c", code)
+          value = substr(value, RSTART + 4)
+        }
+        return result value
+      }
+      $1 == "=" && $3 == "IPv4" && !seen[$8]++ {
+        txt = $10
+        name = unescape($4)
+        if (match(txt, /fn=[^;]+/)) {
+          fn = substr(txt, RSTART + 3, RLENGTH - 3)
+          gsub(/"/, "", fn)
+          if (fn != "") name = fn
+        }
+        print name "\t" $8 "\t" $8 "\t1\tcast"
+      }
+    '
+
+  # 3. Discover Miracast / Wi-Fi Direct TVs (cached P2P peers via NetworkManager / wpa_cli)
+  if command -v nmcli >/dev/null 2>&1; then
+    nmcli -t -f BSSID,SSID,MODE device wifi list 2>/dev/null | awk -F':' '
+      $0 ~ /\[TV\]/ || $0 ~ /DIRECT-/ {
+        bssid = $1 ":" $2 ":" $3 ":" $4 ":" $5 ":" $6
+        name = $7
+        if (name == "") name = "Smart TV (" bssid ")"
+        if (!seen[bssid]++) {
+          print name "\t" bssid "\t" bssid "\t1\twfd"
+        }
+      }
+    '
+  fi
 }
 
 load_target() {

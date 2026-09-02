@@ -16,6 +16,7 @@ BarWidget {
   property string selectedName: ""
   property string selectedAddress: ""
   property string selectedDeviceId: ""
+  property string selectedProtocol: "airplay"
   property bool pairingRequired: false
   property bool pairingPromptActive: false
   property string discoveryError: ""
@@ -37,7 +38,7 @@ BarWidget {
 
   readonly property var mirroredProperties: [
     "bar", "settings", "receivers", "selectedName", "selectedAddress",
-    "selectedDeviceId", "pairingRequired", "pairingPromptActive", "discoveryError", "streamError", "mirroring",
+    "selectedDeviceId", "selectedProtocol", "pairingRequired", "pairingPromptActive", "discoveryError", "streamError", "mirroring",
     "networkDescription", "firewallError", "firewallManaged", "homepodOutputs", "homepodActiveCount"
   ]
 
@@ -213,26 +214,32 @@ BarWidget {
         name: fields[0],
         address: fields[1],
         deviceId: fields[2] || "",
-        paired: fields[3] === "1"
+        paired: fields[3] === "1",
+        protocol: fields[4] || "airplay"
       })
     }
     return found
   }
 
-  function selectReceiver(name, address, deviceId) {
+  function selectReceiver(name, address, deviceId, protocol) {
     root.selectedName = name
     root.selectedAddress = address
     root.selectedDeviceId = deviceId || ""
+    root.selectedProtocol = protocol || "airplay"
     root.pairingPromptActive = true
     for (var i = 0; i < root.receivers.length; i++) {
       if (root.receivers[i].address === address) {
-        root.pairingRequired = !root.receivers[i].paired
+        root.pairingRequired = !root.receivers[i].paired && (root.selectedProtocol === "airplay")
       }
     }
     saveProcess.command = [root.ctlPath, "save", name, address, root.selectedDeviceId]
     saveProcess.running = true
-    root.checkPairing()
-    root.refreshFirewallState()
+    if (root.selectedProtocol === "airplay") {
+      root.checkPairing()
+      root.refreshFirewallState()
+    } else {
+      root.pairingRequired = false
+    }
     root.injectPanel()
   }
 
@@ -264,6 +271,7 @@ BarWidget {
     root.selectedName = ""
     root.selectedAddress = ""
     root.selectedDeviceId = ""
+    root.selectedProtocol = "airplay"
     root.pairingRequired = false
     root.pairingPromptActive = false
     clearProcess.command = [root.ctlPath, "clear"]
@@ -307,15 +315,23 @@ BarWidget {
         name: receiver.name,
         address: receiver.address,
         deviceId: receiver.deviceId,
-        paired: receiver.address === address ? paired : receiver.paired
+        paired: receiver.address === address ? paired : receiver.paired,
+        protocol: receiver.protocol || "airplay"
       })
     }
     root.receivers = updated
-    if (root.selectedAddress === address) root.pairingRequired = !paired
+    if (root.selectedAddress === address && root.selectedProtocol === "airplay") root.pairingRequired = !paired
     root.injectPanel()
   }
 
   function streamCommand(pairCode) {
+    var proto = root.selectedProtocol || "airplay"
+    if (proto === "wfd") {
+      return ["fluxcast", "--protocol", "wfd", "--device", root.selectedDeviceId || root.selectedAddress]
+    }
+    if (proto === "cast") {
+      return ["fluxcast", "--protocol", "cast", "--device", root.selectedAddress]
+    }
     var command = ["env"]
     var vaapiDriver = String(root.setting("vaapiDriver", ""))
     if (vaapiDriver !== "") command.push("LIBVA_DRIVER_NAME=" + vaapiDriver)

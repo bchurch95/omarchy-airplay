@@ -376,13 +376,45 @@ Panel {
                     elide: Text.ElideRight
                   }
 
-                  Text {
-                    width: parent.width
-                    text: receiverRow.modelData.address
-                    color: root.dim
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    elide: Text.ElideRight
+                  Row {
+                    spacing: Style.spacing.xs
+
+                    Rectangle {
+                      height: 14
+                      width: protocolLabel.implicitWidth + 8
+                      radius: 3
+                      color: {
+                        var proto = receiverRow.modelData.protocol || "airplay"
+                        if (proto === "cast") return "#e67e22"
+                        if (proto === "wfd") return "#9b59b6"
+                        return Color.accent
+                      }
+                      anchors.verticalCenter: parent.verticalCenter
+
+                      Text {
+                        id: protocolLabel
+                        anchors.centerIn: parent
+                        text: {
+                          var proto = receiverRow.modelData.protocol || "airplay"
+                          if (proto === "cast") return "Google Cast"
+                          if (proto === "wfd") return "Miracast"
+                          return "AirPlay 2"
+                        }
+                        color: "#ffffff"
+                        font.family: root.fontFamily
+                        font.pixelSize: 9
+                        font.bold: true
+                      }
+                    }
+
+                    Text {
+                      text: receiverRow.modelData.address
+                      color: root.dim
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      elide: Text.ElideRight
+                      anchors.verticalCenter: parent.verticalCenter
+                    }
                   }
                 }
 
@@ -397,7 +429,7 @@ Panel {
                   onClicked: {
                     if (!root.hostWidget) return
                     if (receiverRow.selected) root.hostWidget.clearSelection()
-                    else root.hostWidget.selectReceiver(receiverRow.modelData.name, receiverRow.modelData.address, receiverRow.modelData.deviceId)
+                    else root.hostWidget.selectReceiver(receiverRow.modelData.name, receiverRow.modelData.address, receiverRow.modelData.deviceId, receiverRow.modelData.protocol)
                   }
                 }
 
@@ -417,7 +449,7 @@ Panel {
                       if (!root.hostWidget) return
                       if (root.mirroring && receiverRow.selected) root.hostWidget.stop()
                       else {
-                        root.hostWidget.selectReceiver(receiverRow.modelData.name, receiverRow.modelData.address, receiverRow.modelData.deviceId)
+                        root.hostWidget.selectReceiver(receiverRow.modelData.name, receiverRow.modelData.address, receiverRow.modelData.deviceId, receiverRow.modelData.protocol)
                         root.hostWidget.start("")
                       }
                     }
@@ -428,7 +460,7 @@ Panel {
                     tooltipText: root.t("forgetTooltip")
                     foreground: root.foreground
                     hoverColor: Color.urgent
-                    visible: receiverRow.paired
+                    visible: receiverRow.paired && (receiverRow.modelData.protocol === "airplay" || !receiverRow.modelData.protocol)
                     fontFamily: root.fontFamily
                     onClicked: if (root.hostWidget) root.hostWidget.forgetReceiver(receiverRow.modelData)
                   }

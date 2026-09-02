@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "io.github.etroll.omarchy-airplay",
-  "name": "AirPlay Mirror",
-  "version": "0.2.0",
-  "author": "Karl Løland",
+  "name": "Universal Cast & Multi-Room",
+  "version": "1.0.0",
+  "author": "Ben Church & Contributors",
   "license": "MIT",
-  "description": "Discover AirPlay receivers and mirror the Omarchy desktop with DoubleTake.",
+  "description": "Universal casting hub for Apple AirPlay 2, Google Cast, Miracast Smart TVs, and Apple HomePod multi-room audio.",
   "kinds": [
     "bar-widget"
   ],
@@ -13,14 +13,18 @@
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "AirPlay Mirror",
-    "description": "Discover, select, pair, start and stop AirPlay screen mirroring from the bar.",
-    "category": "System",
+    "displayName": "Universal Cast",
+    "description": "Discover and stream to Apple TVs, Chromecasts, Miracast TVs, and multi-room HomePods.",
+    "category": "Media",
     "aliases": [
+      "cast",
       "airplay",
+      "chromecast",
+      "miracast",
+      "homepod",
       "screen mirror",
       "doubletake",
-      "apple tv"
+      "fluxcast"
     ],
     "allowMultiple": false,
     "defaultSection": "right",
