@@ -124,18 +124,25 @@ discover() {
       }
     '
 
-  # 3. Discover Miracast / Wi-Fi Direct TVs (cached P2P peers via NetworkManager / wpa_cli)
-  if command -v nmcli >/dev/null 2>&1; then
-    nmcli -t -f BSSID,SSID,MODE device wifi list 2>/dev/null | awk -F':' '
-      $0 ~ /\[TV\]/ || $0 ~ /DIRECT-/ {
-        bssid = $1 ":" $2 ":" $3 ":" $4 ":" $5 ":" $6
-        name = $7
-        if (name == "") name = "Smart TV (" bssid ")"
-        if (!seen[bssid]++) {
-          print name "\t" bssid "\t" bssid "\t1\twfd"
+  # 3. Discover Miracast / Wi-Fi Direct TVs (instant cached + background refresh)
+  local wfd_cache="/tmp/omarchy-wfd-peers.cache"
+  if [[ -f "$wfd_cache" ]]; then
+    cat "$wfd_cache"
+  fi
+
+  if command -v fluxcast >/dev/null 2>&1; then
+    (
+      fluxcast --wfd-scan --wfd-timeout 3 2>/dev/null | awk '
+        match($0, /\[[0-9]+\]\s+([0-9A-Fa-f:]{17})\s+(.*)\s+via/, m) {
+          bssid = m[1]
+          name = m[2]
+          gsub(/^\[TV\]\s*/, "", name)
+          if (!seen[bssid]++) {
+            print name "\t" bssid "\t" bssid "\t1\twfd"
+          }
         }
-      }
-    '
+      ' > "${wfd_cache}.tmp" && mv "${wfd_cache}.tmp" "$wfd_cache"
+    ) >/dev/null 2>&1 &
   fi
 }
 

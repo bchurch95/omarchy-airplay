@@ -514,17 +514,17 @@ Panel {
             }
           }
 
-          PanelSeparator { visible: root.selectedAddress !== ""; foreground: root.foreground }
+          PanelSeparator { visible: root.firewallManaged || root.firewallError !== ""; foreground: root.foreground }
 
           PanelSectionHeader {
-            visible: root.selectedAddress !== ""
+            visible: root.firewallManaged || root.firewallError !== ""
             text: root.t("networkAndFirewall")
             foreground: root.foreground
             fontFamily: root.fontFamily
           }
 
           Text {
-            visible: root.selectedAddress !== "" && root.networkDescription !== ""
+            visible: (root.firewallManaged || root.firewallError !== "") && root.networkDescription !== ""
             width: parent.width
             text: root.t("activeNetwork", { network: root.networkDescription })
             color: root.dim
@@ -534,12 +534,10 @@ Panel {
           }
 
           Text {
-            visible: root.selectedAddress !== ""
+            visible: root.firewallManaged
             width: parent.width
-            text: root.firewallManaged
-              ? root.t("firewallManaged", { address: root.selectedAddress })
-              : root.t("firewallHelp", { address: root.selectedAddress })
-            color: root.firewallManaged ? Color.accent : root.dim
+            text: root.t("firewallManaged", { address: root.selectedAddress })
+            color: Color.accent
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             wrapMode: Text.WordWrap
@@ -553,12 +551,6 @@ Panel {
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             wrapMode: Text.WordWrap
-          }
-
-          Button {
-            visible: root.selectedAddress !== "" && !root.firewallManaged
-            text: root.t("allowFirewall")
-            onClicked: if (root.hostWidget) root.hostWidget.allowSelectedReceiver()
           }
 
           Text {
