@@ -393,6 +393,10 @@ BarWidget {
     return "stopping"
   }
 
+  function launchMiracast() {
+    Quickshell.execDetached(["sh", "-c", "if command -v gnome-network-displays >/dev/null 2>&1; then gnome-network-displays; elif command -v fluxcast >/dev/null 2>&1; then fluxcast --wfd-scan; else omarchy-notification-send -g '󰖟' 'Miracast / WiDi' 'Install gnome-network-displays via yay to enable direct Miracast streaming.'; fi"])
+  }
+
   function pair(code) {
     var clean = String(code).replace(/\s/g, "")
     if (!/^\d{4}$/.test(clean)) return "invalid-code"

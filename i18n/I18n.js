@@ -47,7 +47,14 @@ var messages = {
     turnOffAll: "Turn Off All",
     useHomepods: "Use HomePods",
     useSpeakers: "Use Speakers",
-    audioOutputSwitched: "Audio output switched"
+    audioOutputSwitched: "Audio output switched",
+    miracastSpotTitle: "Miracast & Wi-Fi Direct (WiDi)",
+    miracastSpotDesc: "Direct P2P mirroring for Samsung, LG, Roku, and Wireless Display Adapters.",
+    launchMiracastBtn: "Launch Wireless Display",
+    allReceivers: "All",
+    airplayReceivers: "AirPlay 2",
+    miracastReceivers: "Miracast (WiDi)",
+    castReceivers: "Google Cast"
   },
   nb: {
     airplayMirror: "AirPlay-speiling",

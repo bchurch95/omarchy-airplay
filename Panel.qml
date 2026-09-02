@@ -27,6 +27,19 @@ Panel {
   property string networkDescription: ""
   property string firewallError: ""
   property bool firewallManaged: false
+  property string activeTab: "all"
+
+  readonly property var filteredReceivers: {
+    if (root.activeTab === "all") return root.receivers
+    return root.receivers.filter(function(r) {
+      var proto = r.protocol || "airplay"
+      return proto === root.activeTab
+    })
+  }
+
+  readonly property int airplayCount: root.receivers.filter(function(r) { return (r.protocol || "airplay") === "airplay" }).length
+  readonly property int wfdCount: root.receivers.filter(function(r) { return r.protocol === "wfd" }).length
+  readonly property int castCount: root.receivers.filter(function(r) { return r.protocol === "cast" }).length
 
   readonly property color foreground: bar ? bar.foreground : Color.foreground
   readonly property color dim: Qt.darker(foreground, 1.45)
@@ -59,13 +72,38 @@ Panel {
       onCloseRequested: root.close()
 
       Flickable {
+        id: scroller
         anchors.fill: parent
         contentWidth: width
         contentHeight: contentColumn.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
+        flickableDirection: Flickable.VerticalFlick
 
         ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+        WheelHandler {
+          target: scroller
+          property: "contentY"
+          acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+          orientation: Qt.Vertical
+          onWheel: function(event) {
+            var step = 90
+            var dy = event.angleDelta.y !== 0 ? event.angleDelta.y : event.pixelDelta.y
+            var maxScroll = Math.max(0, scroller.contentHeight - scroller.height)
+            var targetY = Math.max(0, Math.min(maxScroll, scroller.contentY - (dy > 0 ? step : -step)))
+            scrollAnim.to = targetY
+            scrollAnim.restart()
+          }
+        }
+
+        NumberAnimation {
+          id: scrollAnim
+          target: scroller
+          property: "contentY"
+          duration: 120
+          easing.type: Easing.OutQuad
+        }
 
         Column {
           id: contentColumn
@@ -309,6 +347,127 @@ Panel {
             fontFamily: root.fontFamily
           }
 
+          Row {
+            width: parent.width
+            spacing: Style.spacing.xs
+
+            Repeater {
+              model: [
+                { id: "all", label: root.t("allReceivers") + " (" + root.receivers.length + ")", icon: "󰕰" },
+                { id: "airplay", label: root.t("airplayReceivers") + " (" + root.airplayCount + ")", icon: "󰐨" },
+                { id: "wfd", label: root.t("miracastReceivers") + " (" + root.wfdCount + ")", icon: "󰖟" },
+                { id: "cast", label: root.t("castReceivers") + " (" + root.castCount + ")", icon: "󰑈" }
+              ]
+
+              delegate: Rectangle {
+                id: tabBtn
+                required property var modelData
+                readonly property bool isCurrent: root.activeTab === modelData.id
+                width: (contentColumn.width - Style.spacing.xs * 3) / 4
+                height: Style.space(28)
+                radius: Style.cornerRadius
+                color: isCurrent ? Color.accent : (tabMouse.containsMouse ? Style.hoverFillFor(root.foreground, root.foreground) : "transparent")
+                border.width: isCurrent ? 0 : 1
+                border.color: isCurrent ? "transparent" : root.dim
+
+                Row {
+                  anchors.centerIn: parent
+                  spacing: 4
+
+                  Text {
+                    text: tabBtn.modelData.icon
+                    color: tabBtn.isCurrent ? "#ffffff" : root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    anchors.verticalCenter: parent.verticalCenter
+                  }
+
+                  Text {
+                    text: tabBtn.modelData.label
+                    color: tabBtn.isCurrent ? "#ffffff" : root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: 10
+                    font.bold: tabBtn.isCurrent
+                    anchors.verticalCenter: parent.verticalCenter
+                    elide: Text.ElideRight
+                  }
+                }
+
+                MouseArea {
+                  id: tabMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.activeTab = tabBtn.modelData.id
+                }
+              }
+            }
+          }
+
+          Rectangle {
+            visible: root.activeTab === "wfd" || (root.activeTab === "all" && root.wfdCount === 0)
+            width: contentColumn.width
+            implicitHeight: wfdCardCol.implicitHeight + Style.spacing.md * 2
+            radius: Style.cornerRadius
+            color: Style.hoverFillFor("#9b59b6", root.foreground)
+            border.color: "#9b59b6"
+            border.width: 1
+
+            Column {
+              id: wfdCardCol
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.top: parent.top
+              anchors.margins: Style.spacing.rowPaddingX
+              spacing: Style.spacing.xs
+
+              Row {
+                width: parent.width
+                spacing: Style.spacing.sm
+
+                Text {
+                  text: "󰖟"
+                  color: "#9b59b6"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.icon
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Column {
+                  width: parent.width - Style.space(36)
+                  spacing: Style.spacing.xxs
+
+                  Text {
+                    text: root.t("miracastSpotTitle")
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: true
+                  }
+
+                  Text {
+                    width: parent.width
+                    text: root.t("miracastSpotDesc")
+                    color: root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    wrapMode: Text.WordWrap
+                  }
+                }
+              }
+
+              Button {
+                width: parent.width
+                text: root.t("launchMiracastBtn")
+                onClicked: {
+                  if (root.hostWidget && root.hostWidget.launchMiracast) {
+                    root.hostWidget.launchMiracast()
+                  }
+                }
+              }
+            }
+          }
+
           Text {
             visible: root.discoveryError !== ""
             width: parent.width
@@ -320,7 +479,7 @@ Panel {
           }
 
           Repeater {
-            model: root.receivers
+            model: root.filteredReceivers
 
             delegate: Rectangle {
               id: receiverRow
