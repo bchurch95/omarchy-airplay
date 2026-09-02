@@ -455,12 +455,42 @@ Panel {
           width: parent.width
           spacing: Style.spacing.panelGap
 
+          Row {
+            width: parent.width
+            spacing: Style.spacing.sm
+
+            Button {
+              width: (parent.width - Style.spacing.sm) / 2
+              text: "󰑐 Scan for TVs"
+              onClicked: {
+                if (root.hostWidget) root.hostWidget.discover()
+              }
+            }
+
+            Button {
+              width: (parent.width - Style.spacing.sm) / 2
+              text: "󰖟 Open FluxCast"
+              onClicked: {
+                if (root.hostWidget && root.hostWidget.launchFluxcast) {
+                  root.hostWidget.launchFluxcast()
+                }
+              }
+            }
+          }
+
+          PanelSectionHeader {
+            text: "DISCOVERED WIDI DISPLAYS (" + root.miracastReceivers.length + ")"
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+          }
+
           Rectangle {
+            visible: root.miracastReceivers.length === 0
             width: parent.width
             implicitHeight: wfdCardCol.implicitHeight + Style.spacing.md * 2
             radius: Style.cornerRadius
-            color: Style.hoverFillFor("#9b59b6", root.foreground)
-            border.color: "#9b59b6"
+            color: Style.hoverFillFor(root.foreground, root.foreground, 0.05)
+            border.color: root.dim
             border.width: 1
 
             Column {
@@ -488,7 +518,7 @@ Panel {
                   spacing: Style.spacing.xxs
 
                   Text {
-                    text: root.t("miracastSpotTitle")
+                    text: "Wi-Fi Direct / Miracast Screen Mirroring"
                     color: root.foreground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.body
@@ -497,7 +527,7 @@ Panel {
 
                   Text {
                     width: parent.width
-                    text: root.t("miracastSpotDesc")
+                    text: "Put your Smart TV (Samsung, LG, Roku, Fire TV) or Wireless Display adapter in Screen Mirroring mode, then click 'Scan for TVs' above."
                     color: root.dim
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
@@ -505,39 +535,14 @@ Panel {
                   }
                 }
               }
-
-              Button {
-                width: parent.width
-                text: root.t("launchMiracastBtn")
-                onClicked: {
-                  if (root.hostWidget && root.hostWidget.launchMiracast) {
-                    root.hostWidget.launchMiracast()
-                  }
-                }
-              }
             }
-          }
-
-          PanelSectionHeader {
-            text: "DISCOVERED WIDI DISPLAYS (" + root.miracastReceivers.length + ")"
-            foreground: root.foreground
-            fontFamily: root.fontFamily
-          }
-
-          Text {
-            visible: root.miracastReceivers.length === 0
-            width: parent.width
-            text: "No direct Wi-Fi Direct/Miracast TVs found yet. Click 'Launch Wireless Display' to start P2P streaming."
-            color: root.dim
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            wrapMode: Text.WordWrap
           }
 
           ListView {
             id: miracastListView
+            visible: root.miracastReceivers.length > 0
             width: parent.width
-            height: Math.min(contentHeight, Style.space(260))
+            height: Math.min(contentHeight, Style.space(360))
             spacing: Style.spacing.xs
             clip: true
             boundsBehavior: Flickable.StopAtBounds
@@ -548,7 +553,7 @@ Panel {
             delegate: Rectangle {
               required property var modelData
               width: miracastListView.width
-              implicitHeight: Style.space(48)
+              implicitHeight: Style.space(52)
               radius: Style.cornerRadius
               color: Style.hoverFillFor(root.foreground, root.foreground)
 
@@ -568,27 +573,51 @@ Panel {
                 }
 
                 Column {
-                  width: parent.width - Style.space(80)
+                  width: parent.width - Style.space(90)
                   anchors.verticalCenter: parent.verticalCenter
+                  spacing: Style.spacing.xxs
 
                   Text {
+                    width: parent.width
                     text: modelData.name
                     color: root.foreground
                     font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
                     font.bold: true
                     elide: Text.ElideRight
                   }
 
-                  Text {
-                    text: modelData.address
-                    color: root.dim
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
+                  Row {
+                    spacing: Style.spacing.xs
+
+                    Rectangle {
+                      height: 14
+                      width: 54
+                      radius: 3
+                      color: "#9b59b6"
+                      anchors.verticalCenter: parent.verticalCenter
+
+                      Text {
+                        anchors.centerIn: parent
+                        text: "Miracast"
+                        color: "#ffffff"
+                        font.family: root.fontFamily
+                        font.pixelSize: 9
+                        font.bold: true
+                      }
+                    }
+
+                    Text {
+                      text: modelData.address
+                      color: root.dim
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                    }
                   }
                 }
 
                 Button {
-                  text: "Cast"
+                  text: "Mirror"
                   anchors.verticalCenter: parent.verticalCenter
                   onClicked: {
                     if (root.hostWidget) {
@@ -631,33 +660,6 @@ Panel {
                 if (root.hostWidget && root.hostWidget.disableAllHomepods) {
                   root.hostWidget.disableAllHomepods()
                 }
-                if (root.hostWidget && root.hostWidget.ctlPath) {
-                  Quickshell.execDetached([root.hostWidget.ctlPath, "set-sink", "default"])
-                }
-                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", root.t("audioOutputSwitched"), root.t("useSpeakers")])
-              }
-            }
-          }
-
-          Row {
-            width: parent.width
-            spacing: Style.spacing.sm
-
-            Button {
-              width: (parent.width - Style.spacing.sm) / 2
-              text: root.t("useHomepods")
-              onClicked: {
-                if (root.hostWidget && root.hostWidget.ctlPath) {
-                  Quickshell.execDetached([root.hostWidget.ctlPath, "set-sink", "homepods"])
-                }
-                Quickshell.execDetached(["omarchy-notification-send", "-g", "󰓃", root.t("audioOutputSwitched"), root.t("useHomepods")])
-              }
-            }
-
-            Button {
-              width: (parent.width - Style.spacing.sm) / 2
-              text: root.t("useSpeakers")
-              onClicked: {
                 if (root.hostWidget && root.hostWidget.ctlPath) {
                   Quickshell.execDetached([root.hostWidget.ctlPath, "set-sink", "default"])
                 }

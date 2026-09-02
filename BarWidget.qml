@@ -331,10 +331,10 @@ BarWidget {
   function streamCommand(pairCode) {
     var proto = root.selectedProtocol || "airplay"
     if (proto === "wfd") {
-      return ["fluxcast", "--protocol", "wfd", "--device", root.selectedDeviceId || root.selectedAddress]
+      return ["fluxcast", "--protocol", "wfd", "--wfd-peer", root.selectedDeviceId || root.selectedAddress]
     }
     if (proto === "cast") {
-      return ["fluxcast", "--protocol", "cast", "--device", root.selectedAddress]
+      return ["fluxcast", "--protocol", "cast", "--tv-ip", root.selectedAddress]
     }
     var command = ["env"]
     var vaapiDriver = String(root.setting("vaapiDriver", ""))
@@ -361,21 +361,22 @@ BarWidget {
     mirrorProcess.running = true
     root.notify(root.t("mirroringTitle"), root.t("connecting", { name: root.selectedName }))
     root.injectPanel()
-    return "starting"
   }
 
   function start(pairCode) {
-    if (root.mirroring) {
-      root.stop(true)
+    if (root.selectedAddress === "") return "no-receiver-selected"
+    if (root.mirroring) return "already-mirroring"
+    root.streamError = ""
+    root.pairingPromptActive = false
+    root.pairingAttemptInFlight = false
+    pairingCompleteTimer.stop()
+    if (root.pairingRequired && (pairCode === undefined || pairCode === "")) {
+      root.pairingPromptActive = true
+      root.injectPanel()
+      return "pairing-required"
     }
-    if (clearRestoreProcess.running) return "preparing-capture"
-    if (root.selectedAddress === "") {
-      root.open()
-      return "no-receiver"
-    }
-    if ((pairCode || "") === "") root.pairingPromptActive = true
-    root.pendingStartPairCode = pairCode || ""
-    if (root.boolSetting("alwaysPromptForCapture", false) && root.selectedDeviceId !== "") {
+    if (root.needsRestoreClear(root.selectedDeviceId)) {
+      root.pendingStartPairCode = pairCode || ""
       clearRestoreProcess.command = [root.ctlPath, "clear-restore", root.selectedDeviceId]
       clearRestoreProcess.running = true
       return "preparing-capture"
@@ -386,7 +387,7 @@ BarWidget {
   function stop(silent) {
     root.deliberateStop = true
     mirrorProcess.running = false
-    Quickshell.execDetached(["killall", "doubletake"])
+    Quickshell.execDetached(["killall", "doubletake", "fluxcast"])
     Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
     if (!silent) root.notify(root.t("mirroringTitle"), root.t("stopped", { name: root.selectedName }))
     root.injectPanel()
@@ -394,7 +395,11 @@ BarWidget {
   }
 
   function launchMiracast() {
-    Quickshell.execDetached(["sh", "-c", "if command -v gnome-network-displays >/dev/null 2>&1; then gnome-network-displays; elif command -v fluxcast >/dev/null 2>&1; then fluxcast --wfd-scan; else omarchy-notification-send -g '󰖟' 'Miracast / WiDi' 'Install gnome-network-displays via yay to enable direct Miracast streaming.'; fi"])
+    root.discover()
+  }
+
+  function launchFluxcast() {
+    Quickshell.execDetached(["fluxcast", "--tray"])
   }
 
   function pair(code) {

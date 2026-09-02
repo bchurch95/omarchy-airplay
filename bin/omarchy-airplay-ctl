@@ -132,7 +132,7 @@ discover() {
 
   if command -v fluxcast >/dev/null 2>&1; then
     (
-      fluxcast --wfd-scan --wfd-timeout 3 2>/dev/null | awk '
+      fluxcast --wfd-scan --wfd-timeout 4 2>/dev/null | awk '
         match($0, /\[[0-9]+\]\s+([0-9A-Fa-f:]{17})\s+(.*)\s+via/, m) {
           bssid = m[1]
           name = m[2]
@@ -143,6 +143,26 @@ discover() {
         }
       ' > "${wfd_cache}.tmp" && mv "${wfd_cache}.tmp" "$wfd_cache"
     ) >/dev/null 2>&1 &
+  fi
+}
+
+wfd_scan() {
+  local timeout="${1:-4}"
+  local wfd_cache="/tmp/omarchy-wfd-peers.cache"
+  if command -v fluxcast >/dev/null 2>&1; then
+    fluxcast --wfd-scan --wfd-timeout "$timeout" 2>/dev/null | awk '
+      match($0, /\[[0-9]+\]\s+([0-9A-Fa-f:]{17})\s+(.*)\s+via/, m) {
+        bssid = m[1]
+        name = m[2]
+        gsub(/^\[TV\]\s*/, "", name)
+        if (!seen[bssid]++) {
+          print name "\t" bssid "\t" bssid "\t1\twfd"
+        }
+      }
+    ' > "${wfd_cache}.tmp" && mv "${wfd_cache}.tmp" "$wfd_cache"
+  fi
+  if [[ -f "$wfd_cache" ]]; then
+    cat "$wfd_cache"
   fi
 }
 
@@ -340,6 +360,10 @@ case "$1" in
   set-sink)
     shift
     set_sink "$@"
+    ;;
+  wfd-scan)
+    shift
+    wfd_scan "$@"
     ;;
   *)
     usage
