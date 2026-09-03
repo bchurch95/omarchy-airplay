@@ -233,6 +233,15 @@ The plugin uses English by default and selects Norwegian Bokmål text for `nb`,
 `nn`, and `no` system locales. Translations live in `i18n/I18n.js`; add another
 language there by supplying the same message keys as the English map.
 
+## Credits & Acknowledgements
+
+This project builds upon the work of several open-source authors in the Omarchy and Linux streaming ecosystems:
+
+- **Karl Løland ([@ETroll](https://github.com/ETroll))** — Original author of [omarchy-airplay](https://github.com/ETroll/omarchy-airplay), providing the foundational Omarchy bar widget, DoubleTake integration, pairing workflow, and process supervision.
+- **Prashul Jain ([@jainprashul](https://github.com/jainprashul))** — Author of [Oma Cast](https://github.com/jainprashul/omacast), inspiring the Wi-Fi Direct (WFD / Miracast) scanning architecture and multi-protocol streaming integration.
+- **Ilya Pukalov ([@IlyaP358](https://github.com/IlyaP358))** — Creator of [FluxCast](https://github.com/IlyaP358/fluxcast), the underlying Miracast / Wi-Fi Direct and UPnP engine.
+- **Omar Roth ([@omarroth](https://github.com/omarroth))** — Creator of [DoubleTake](https://github.com/omarroth/doubletake), the AirPlay 2 screen mirroring engine.
+
 ## License
 
 [MIT](LICENSE)

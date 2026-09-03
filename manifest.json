@@ -3,7 +3,7 @@
   "id": "io.github.bchurch95.omarchy-universal-cast",
   "name": "Universal Cast & Multi-Room",
   "version": "1.0.0",
-  "author": "Ben Church & Contributors",
+  "author": "Ben Church & Contributors (based on work by Karl Løland & Prashul Jain)",
   "license": "MIT",
   "description": "Universal casting hub for Apple AirPlay 2, Google Cast, Miracast Smart TVs, and Apple HomePod multi-room audio.",
   "kinds": [
