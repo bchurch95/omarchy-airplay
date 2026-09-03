@@ -33,11 +33,11 @@
       "videoCodec": "h264",
       "hardwareEncoder": "auto",
       "vaapiDriver": "",
-      "fps": 30,
-      "targetLatencyMs": 180,
+      "fps": 60,
+      "targetLatencyMs": 0,
       "portRange": "60000-60010",
-      "audio": false,
-      "alwaysPromptForCapture": true
+      "audio": true,
+      "alwaysPromptForCapture": false
     },
     "schema": [
       {
