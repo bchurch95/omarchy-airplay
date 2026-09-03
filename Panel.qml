@@ -19,6 +19,7 @@ Panel {
   property string selectedName: ""
   property string selectedAddress: ""
   property string selectedDeviceId: ""
+  property bool receiverAvailable: false
   property bool pairingRequired: false
   property bool pairingPromptActive: false
   property string discoveryError: ""
@@ -85,7 +86,8 @@ Panel {
           title: root.t("airplayMirror")
           meta: root.mirroring
             ? root.t("mirroringTo", { name: root.selectedName })
-            : (root.selectedAddress !== "" ? root.t("readyFor", { name: root.selectedName }) : root.t("chooseReceiver"))
+            : (root.selectedAddress === "" ? root.t("chooseReceiver")
+              : (root.receiverAvailable ? root.t("readyFor", { name: root.selectedName }) : root.t("searchingLocalNetwork")))
           foreground: root.foreground
           fontFamily: root.fontFamily
 
@@ -244,6 +246,7 @@ Panel {
             visible: root.screenReceivers.length === 0
             width: parent.width
             text: root.discoveryError !== "" ? root.discoveryError : root.t("noReceivers")
+            textFormat: Text.PlainText
             color: root.dim
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
@@ -309,6 +312,7 @@ Panel {
                   Text {
                     width: parent.width
                     text: receiverRow.modelData.name
+                    textFormat: Text.PlainText
                     color: root.foreground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.body
@@ -347,12 +351,14 @@ Panel {
 
                     Text {
                       text: receiverRow.modelData.address
+                      textFormat: Text.PlainText
                       color: root.dim
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.caption
                       elide: Text.ElideRight
                       anchors.verticalCenter: parent.verticalCenter
                     }
+                  }
                   }
                 }
 
@@ -409,7 +415,7 @@ Panel {
 
           // Pairing Box
           Column {
-            visible: root.selectedAddress !== "" && root.pairingRequired
+            visible: root.selectedAddress !== "" && root.pairingRequired && root.pairingPromptActive
             width: parent.width
             spacing: Style.spacing.sm
 
