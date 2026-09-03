@@ -11,7 +11,7 @@ Stream low-latency desktop audio to multiple Apple HomePods and AirPlay speakers
 To install all prerequisites (OwnTone, PipeWire sinks, FIFO bridge, systemd services) and configure low-latency AirPlay 2:
 
 ```bash
-cd ~/.config/omarchy/plugins/io.github.etroll.omarchy-airplay
+cd ~/.config/omarchy/plugins/io.github.bchurch95.omarchy-universal-cast
 ./setup-homepod.sh
 ```
 
@@ -96,8 +96,8 @@ sudo ufw allow in proto tcp from <APPLE_TV_IP> to any port 60000:60010
 After this repository has been published, install the plugin with Omarchy:
 
 ```sh
-omarchy plugin add https://github.com/ETroll/omarchy-airplay.git --enable
-omarchy bar move io.github.etroll.omarchy-airplay --section right
+omarchy plugin add https://github.com/bchurch95/omarchy-airplay.git --enable
+omarchy bar move io.github.bchurch95.omarchy-universal-cast --section right
 ```
 
 The first command installs a user-owned copy below
@@ -116,11 +116,11 @@ For local development, clone the repository and link it into your user plugin
 directory:
 
 ```sh
-git clone https://github.com/ETroll/omarchy-airplay.git
+git clone https://github.com/bchurch95/omarchy-airplay.git
 cd omarchy-airplay
-ln -s "$PWD" ~/.config/omarchy/plugins/io.github.etroll.omarchy-airplay
+ln -s "$PWD" ~/.config/omarchy/plugins/io.github.bchurch95.omarchy-universal-cast
 omarchy-shell shell rescanPlugins
-omarchy bar move io.github.etroll.omarchy-airplay --section right
+omarchy bar move io.github.bchurch95.omarchy-universal-cast --section right
 ```
 
 Saved changes under `~/.config/omarchy/plugins/` normally reload
@@ -160,11 +160,11 @@ systems, explicitly selecting the working encoder can be more reliable than
 Useful IPC calls:
 
 ```sh
-omarchy-shell io.github.etroll.omarchy-airplay status
-omarchy-shell io.github.etroll.omarchy-airplay toggle
-omarchy-shell io.github.etroll.omarchy-airplay discover
-omarchy-shell io.github.etroll.omarchy-airplay select "Living Room" 192.168.1.50 AA:BB:CC:DD:EE:FF
-omarchy-shell io.github.etroll.omarchy-airplay unselect
+omarchy-shell io.github.bchurch95.omarchy-universal-cast status
+omarchy-shell io.github.bchurch95.omarchy-universal-cast toggle
+omarchy-shell io.github.bchurch95.omarchy-universal-cast discover
+omarchy-shell io.github.bchurch95.omarchy-universal-cast select "Living Room" 192.168.1.50 AA:BB:CC:DD:EE:FF
+omarchy-shell io.github.bchurch95.omarchy-universal-cast unselect
 ```
 
 ## Troubleshooting
@@ -196,8 +196,8 @@ receiver** for the selected receiver and retry.
 ### Inspect plugin validation and logs
 
 ```sh
-omarchy plugin validate ~/.config/omarchy/plugins/io.github.etroll.omarchy-airplay
-omarchy plugin list --json | jq '.[] | select(.id == "io.github.etroll.omarchy-airplay")'
+omarchy plugin validate ~/.config/omarchy/plugins/io.github.bchurch95.omarchy-universal-cast
+omarchy plugin list --json | jq '.[] | select(.id == "io.github.bchurch95.omarchy-universal-cast")'
 qs log -p "$OMARCHY_PATH/shell" --tail 100
 ```
 
@@ -206,7 +206,7 @@ qs log -p "$OMARCHY_PATH/shell" --tail 100
 Stop any active mirror, then remove the plugin by its manifest ID:
 
 ```sh
-omarchy plugin remove io.github.etroll.omarchy-airplay
+omarchy plugin remove io.github.bchurch95.omarchy-universal-cast
 ```
 
 This removes only the installed plugin copy. It does not uninstall DoubleTake,

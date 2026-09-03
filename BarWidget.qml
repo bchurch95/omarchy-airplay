@@ -7,7 +7,7 @@ import "i18n/I18n.js" as I18n
 
 BarWidget {
   id: root
-  moduleName: "io.github.etroll.omarchy-airplay"
+  moduleName: "io.github.bchurch95.omarchy-universal-cast"
 
   readonly property string ctlPath: String(Qt.resolvedUrl("bin/omarchy-airplay-run")).replace(/^file:\/\//, "")
   readonly property string runnerPath: ctlPath
@@ -673,7 +673,7 @@ BarWidget {
   implicitHeight: button.implicitHeight
 
   IpcHandler {
-    target: "io.github.etroll.omarchy-airplay"
+    target: "io.github.bchurch95.omarchy-universal-cast"
     function open(): void { root.open() }
     function close(): void { root.close() }
     function discover(): void { root.discover() }
