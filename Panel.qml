@@ -359,7 +359,6 @@ Panel {
                       anchors.verticalCenter: parent.verticalCenter
                     }
                   }
-                  }
                 }
 
                 MouseArea {
