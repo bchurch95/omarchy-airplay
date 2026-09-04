@@ -34,6 +34,7 @@ BarWidget {
 
   readonly property bool mirroring: mirrorProcess.running
   readonly property bool discovering: discoverProcess.running
+  readonly property bool wfdScanning: wfdProcess.running
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
 
   property var homepodOutputs: []
@@ -41,7 +42,7 @@ BarWidget {
 
   readonly property var mirroredProperties: [
     "bar", "settings", "receivers", "selectedName", "selectedAddress",
-    "selectedDeviceId", "selectedProtocol", "receiverAvailable", "pairingRequired", "pairingPromptActive", "discoveryError", "streamError", "mirroring", "discovering",
+    "selectedDeviceId", "selectedProtocol", "receiverAvailable", "pairingRequired", "pairingPromptActive", "discoveryError", "streamError", "mirroring", "discovering", "wfdScanning",
     "networkDescription", "firewallError", "firewallManaged", "homepodOutputs", "homepodActiveCount"
   ]
 
@@ -208,6 +209,13 @@ BarWidget {
     root.discoveryError = ""
     discoverProcess.command = [root.ctlPath, "discover"]
     discoverProcess.running = true
+    root.injectPanel()
+  }
+
+  function scanMiracast() {
+    if (wfdProcess.running) return
+    wfdProcess.command = [root.ctlPath, "wfd-scan", "4"]
+    wfdProcess.running = true
     root.injectPanel()
   }
 
@@ -632,6 +640,29 @@ BarWidget {
   }
 
   Process {
+    id: wfdProcess
+    property string outText: ""
+    property string errText: ""
+    stdout: StdioCollector { waitForEnd: true; onStreamFinished: wfdProcess.outText = text }
+    stderr: StdioCollector { waitForEnd: true; onStreamFinished: wfdProcess.errText = text }
+    onExited: function(code) {
+      if (code === 0) {
+        var wfdFound = root.parseReceivers(wfdProcess.outText)
+        var nonWfd = root.receivers.filter(function(receiver) {
+          return (receiver.protocol || "airplay") !== "wfd"
+        })
+        root.receivers = nonWfd.concat(wfdFound)
+        root.receiverAvailable = root.selectedAddress !== "" && root.receivers.some(function(receiver) {
+          return receiver.address === root.selectedAddress
+        })
+      }
+      wfdProcess.outText = ""
+      wfdProcess.errText = ""
+      root.injectPanel()
+    }
+  }
+
+  Process {
     id: mirrorProcess
     property string errText: ""
     stderr: StdioCollector { waitForEnd: true; onStreamFinished: mirrorProcess.errText = text }
@@ -677,6 +708,7 @@ BarWidget {
     function open(): void { root.open() }
     function close(): void { root.close() }
     function discover(): void { root.discover() }
+    function scanMiracast(): void { root.scanMiracast() }
     function select(name: string, address: string, deviceId: string): string {
       root.selectReceiver(name, address, deviceId)
       return "selected " + name + " (" + address + ")"

@@ -29,6 +29,7 @@ Panel {
   property string firewallError: ""
   property bool firewallManaged: false
   property bool discovering: false
+  property bool wfdScanning: false
 
   // Main navigation tabs: "screens" | "miracast" | "audio"
   property string mainTab: "screens"
@@ -489,13 +490,13 @@ Panel {
               Text {
                 id: scanSpinGlyph
                 text: "󰑐"
-                color: root.discovering ? Color.accent : root.foreground
+                color: (root.wfdScanning || root.discovering) ? Color.accent : root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.icon
                 anchors.verticalCenter: parent.verticalCenter
 
                 RotationAnimator on rotation {
-                  running: root.discovering
+                  running: root.wfdScanning || root.discovering
                   loops: Animation.Infinite
                   from: 0
                   to: 360
@@ -504,8 +505,8 @@ Panel {
               }
 
               Text {
-                text: root.discovering ? "Scanning Wi-Fi Direct & Miracast..." : "Scan for Wi-Fi Direct / Miracast TVs"
-                color: root.discovering ? Color.accent : root.foreground
+                text: (root.wfdScanning || root.discovering) ? "Scanning Wi-Fi Direct & Miracast..." : "Scan for Wi-Fi Direct / Miracast TVs"
+                color: (root.wfdScanning || root.discovering) ? Color.accent : root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 font.bold: true
@@ -517,10 +518,14 @@ Panel {
               id: scanMouse
               anchors.fill: parent
               hoverEnabled: true
-              enabled: !root.discovering
-              cursorShape: root.discovering ? Qt.ArrowCursor : Qt.PointingHandCursor
+              enabled: !(root.wfdScanning || root.discovering)
+              cursorShape: (root.wfdScanning || root.discovering) ? Qt.ArrowCursor : Qt.PointingHandCursor
               onClicked: {
-                if (root.hostWidget) root.hostWidget.discover()
+                if (root.hostWidget && root.hostWidget.scanMiracast) {
+                  root.hostWidget.scanMiracast()
+                } else if (root.hostWidget) {
+                  root.hostWidget.discover()
+                }
               }
             }
           }
