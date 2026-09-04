@@ -372,7 +372,8 @@ BarWidget {
   function launchStream(pairCode) {
     root.streamError = ""
     root.deliberateStop = false
-    if (root.boolSetting("audio", true)) {
+    var proto = root.selectedProtocol || "airplay"
+    if (proto === "airplay" && root.boolSetting("audio", true)) {
       Quickshell.execDetached([root.ctlPath, "set-sink", "airplay"])
     }
     var command = root.streamCommand(pairCode || "")
@@ -395,13 +396,14 @@ BarWidget {
       root.injectPanel()
       return "pairing-required"
     }
-    if (root.needsRestoreClear(root.selectedDeviceId)) {
+    var proto = root.selectedProtocol || "airplay"
+    if (proto === "airplay" && root.boolSetting("alwaysPromptForCapture", false) && root.selectedDeviceId !== "") {
       root.pendingStartPairCode = pairCode || ""
       clearRestoreProcess.command = [root.ctlPath, "clear-restore", root.selectedDeviceId]
       clearRestoreProcess.running = true
       return "preparing-capture"
     }
-    return root.launchStream(root.pendingStartPairCode)
+    return root.launchStream(pairCode || "")
   }
 
   function stop(silent) {

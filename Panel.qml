@@ -669,12 +669,16 @@ Panel {
                 }
 
                 Button {
-                  text: "Mirror"
+                  text: (root.mirroring && root.selectedAddress === modelData.address) ? "Stop" : "Mirror"
                   anchors.verticalCenter: parent.verticalCenter
                   onClicked: {
                     if (root.hostWidget) {
-                      root.hostWidget.selectReceiver(modelData.name, modelData.address, modelData.deviceId, "wfd")
-                      root.hostWidget.start("")
+                      if (root.mirroring && root.selectedAddress === modelData.address) {
+                        root.hostWidget.stop()
+                      } else {
+                        root.hostWidget.selectReceiver(modelData.name, modelData.address, modelData.deviceId, "wfd")
+                        root.hostWidget.start("")
+                      }
                     }
                   }
                 }
