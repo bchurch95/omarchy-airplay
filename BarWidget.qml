@@ -343,11 +343,12 @@ BarWidget {
 
   function streamCommand(pairCode) {
     var proto = root.selectedProtocol || "airplay"
+    var mon = (root.bar && root.bar.screen && root.bar.screen.name) ? String(root.bar.screen.name) : "eDP-1"
     if (proto === "wfd") {
-      return ["fluxcast", "--protocol", "wfd", "--wfd-peer", root.selectedDeviceId || root.selectedAddress]
+      return ["fluxcast", "--protocol", "wfd", "--wfd-peer", root.selectedDeviceId || root.selectedAddress, "--monitor", mon]
     }
     if (proto === "cast") {
-      return ["fluxcast", "--protocol", "cast", "--tv-ip", root.selectedAddress]
+      return ["fluxcast", "--protocol", "cast", "--tv-ip", root.selectedAddress, "--monitor", mon]
     }
     var executable = String(root.setting("doubletakePath", "doubletake"))
     var portRange = String(root.setting("portRange", "60000-60010"))
