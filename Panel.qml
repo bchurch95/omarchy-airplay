@@ -39,12 +39,69 @@ Panel {
   property string screenFilter: "all"
 
   readonly property var screenReceivers: {
-    var list = root.receivers.filter(function(r) { return (r.protocol || "airplay") !== "wfd" })
-    if (root.screenFilter === "all") return list
-    return list.filter(function(r) { return (r.protocol || "airplay") === root.screenFilter })
+    var rawList = root.receivers.filter(function(r) { return (r.protocol || "airplay") !== "wfd" })
+    var list = (root.screenFilter === "all")
+      ? rawList
+      : rawList.filter(function(r) { return (r.protocol || "airplay") === root.screenFilter })
+
+    // If an active/selected receiver is set but not yet in the discovered list, include it
+    if (root.selectedAddress !== "" && (root.selectedProtocol || "airplay") !== "wfd") {
+      var matchesFilter = (root.screenFilter === "all" || (root.selectedProtocol || "airplay") === root.screenFilter)
+      if (matchesFilter) {
+        var found = list.some(function(r) {
+          return r.address === root.selectedAddress || (r.deviceId && root.selectedDeviceId && r.deviceId === root.selectedDeviceId)
+        })
+        if (!found && root.selectedName !== "") {
+          list = list.concat([{
+            name: root.selectedName,
+            address: root.selectedAddress,
+            deviceId: root.selectedDeviceId || "",
+            paired: true,
+            protocol: root.selectedProtocol || "airplay"
+          }])
+        }
+      }
+    }
+
+    return list.slice().sort(function(a, b) {
+      var aActive = (a.address === root.selectedAddress || (a.deviceId && root.selectedDeviceId && a.deviceId === root.selectedDeviceId))
+      var bActive = (b.address === root.selectedAddress || (b.deviceId && root.selectedDeviceId && b.deviceId === root.selectedDeviceId))
+      var aScore = aActive ? (root.mirroring ? 3 : 2) : (a.paired ? 1 : 0)
+      var bScore = bActive ? (root.mirroring ? 3 : 2) : (b.paired ? 1 : 0)
+      if (aScore !== bScore) return bScore - aScore
+      var nameA = String(a.name || "")
+      var nameB = String(b.name || "")
+      return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" })
+    })
   }
 
-  readonly property var miracastReceivers: root.receivers.filter(function(r) { return r.protocol === "wfd" })
+  readonly property var miracastReceivers: {
+    var list = root.receivers.filter(function(r) { return r.protocol === "wfd" })
+    if (root.selectedAddress !== "" && root.selectedProtocol === "wfd") {
+      var foundMiracast = list.some(function(r) {
+        return r.address === root.selectedAddress || (r.deviceId && root.selectedDeviceId && r.deviceId === root.selectedDeviceId)
+      })
+      if (!foundMiracast && root.selectedName !== "") {
+        list = list.concat([{
+          name: root.selectedName,
+          address: root.selectedAddress,
+          deviceId: root.selectedDeviceId || "",
+          paired: true,
+          protocol: "wfd"
+        }])
+      }
+    }
+    return list.slice().sort(function(a, b) {
+      var aActive = (a.address === root.selectedAddress || (a.deviceId && root.selectedDeviceId && a.deviceId === root.selectedDeviceId))
+      var bActive = (b.address === root.selectedAddress || (b.deviceId && root.selectedDeviceId && b.deviceId === root.selectedDeviceId))
+      var aScore = aActive ? (root.mirroring ? 3 : 2) : (a.paired ? 1 : 0)
+      var bScore = bActive ? (root.mirroring ? 3 : 2) : (b.paired ? 1 : 0)
+      if (aScore !== bScore) return bScore - aScore
+      var nameA = String(a.name || "")
+      var nameB = String(b.name || "")
+      return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" })
+    })
+  }
 
   readonly property int airplayCount: root.receivers.filter(function(r) { return (r.protocol || "airplay") === "airplay" }).length
   readonly property int wfdCount: root.receivers.filter(function(r) { return r.protocol === "wfd" }).length
@@ -446,6 +503,26 @@ Panel {
                       }
                     }
 
+                    Rectangle {
+                      id: activeBadge
+                      visible: receiverRow.selected && root.mirroring
+                      height: 14
+                      width: activeBadgeText.implicitWidth + 8
+                      radius: 3
+                      color: Color.urgent || "#e06c75"
+                      anchors.verticalCenter: parent.verticalCenter
+
+                      Text {
+                        id: activeBadgeText
+                        anchors.centerIn: parent
+                        text: "ACTIVE"
+                        color: "#ffffff"
+                        font.family: root.fontFamily
+                        font.pixelSize: 9
+                        font.bold: true
+                      }
+                    }
+
                     Text {
                       text: receiverRow.selected && root.mirroring && root.virtualMonitorName !== ""
                         ? (receiverRow.modelData.address + " · " + root.virtualMonitorName)
@@ -471,7 +548,10 @@ Panel {
                   onClicked: {
                     if (!root.hostWidget) return
                     if (receiverRow.selected) root.hostWidget.clearSelection()
-                    else root.hostWidget.selectReceiver(receiverRow.modelData.name, receiverRow.modelData.address, receiverRow.modelData.deviceId, receiverRow.modelData.protocol)
+                    else {
+                      root.hostWidget.selectReceiver(receiverRow.modelData.name, receiverRow.modelData.address, receiverRow.modelData.deviceId, receiverRow.modelData.protocol)
+                      screenListView.positionViewAtBeginning()
+                    }
                   }
                 }
 
@@ -494,6 +574,7 @@ Panel {
                       if (root.mirroring && receiverRow.selected) root.hostWidget.stop()
                       else {
                         root.hostWidget.selectReceiver(receiverRow.modelData.name, receiverRow.modelData.address, receiverRow.modelData.deviceId, receiverRow.modelData.protocol)
+                        screenListView.positionViewAtBeginning()
                         root.hostWidget.start("")
                       }
                     }

@@ -225,8 +225,6 @@ discover() {
       '
   )" || true
 
-  [[ -z "$discovered" ]] || printf '%s\n' "$discovered"
-
   # Update known_file with newly discovered receivers
   mkdir -p "$state_dir"
   if [[ -n "$discovered" ]]; then
@@ -252,6 +250,7 @@ discover() {
     awk -F'\t' '{ print $1 "\t" $2 "\t" $3 "\tairplay" }' "$target_file" >> "$candidate_file"
   fi
 
+  local probed_candidates=""
   if [[ -s "$candidate_file" ]]; then
     local probed_seen=""
     while IFS=$'\t' read -r k_name k_addr k_did k_proto; do
@@ -279,17 +278,45 @@ except Exception:
           jq -e --arg device_id "$k_did" 'has($device_id)' "$credentials_file" >/dev/null 2>&1; then
           paired=1
         fi
-        printf '%s\t%s\t%s\t%s\t%s\n' "$k_name" "$k_addr" "$k_did" "$paired" "${k_proto:-airplay}"
+        probed_candidates="${probed_candidates:+${probed_candidates}$'\n'}${k_name}"$'\t'"${k_addr}"$'\t'"${k_did}"$'\t'"${paired}"$'\t'"${k_proto:-airplay}"
       fi
     done < "$candidate_file"
   fi
   rm -f "$candidate_file"
 
   # 3. Discover Miracast / Wi-Fi Direct TVs (instant cached + background refresh)
+  local wfd_cached=""
   local wfd_cache="/tmp/omarchy-wfd-peers.cache"
   if [[ -f "$wfd_cache" ]]; then
-    cat "$wfd_cache"
+    wfd_cached="$(cat "$wfd_cache" 2>/dev/null || true)"
   fi
+
+  # Combine and sort all discovered receivers:
+  # Priority 1: Active route or saved target Apple TV
+  # Priority 2: Other paired receivers
+  # Priority 3: Other discovered receivers
+  local active_addr=""
+  if [[ -f "$active_route_file" ]]; then
+    active_addr="$(awk -F'\t' 'NR==1 { print $2 }' "$active_route_file" 2>/dev/null || true)"
+  elif [[ -f "$target_file" ]]; then
+    active_addr="$(awk -F'\t' 'NR==1 { print $2 }' "$target_file" 2>/dev/null || true)"
+  fi
+
+  {
+    [[ -z "$discovered" ]] || printf '%s\n' "$discovered"
+    [[ -z "$probed_candidates" ]] || printf '%s\n' "$probed_candidates"
+    [[ -z "$wfd_cached" ]] || printf '%s\n' "$wfd_cached"
+  } | awk -F'\t' -v active="$active_addr" '
+    NF >= 2 && !seen[$2]++ {
+      priority = 3
+      if (active != "" && $2 == active) {
+        priority = 1
+      } else if ($4 == "1") {
+        priority = 2
+      }
+      print priority "\t" $0
+    }
+  ' | sort -t$'\t' -k1,1n -k2,2V | cut -f2-
 
   if command -v fluxcast >/dev/null 2>&1; then
     (

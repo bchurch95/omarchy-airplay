@@ -250,6 +250,20 @@ BarWidget {
     return found
   }
 
+  function sortReceivers(list) {
+    if (!list || !list.length) return []
+    return list.slice().sort(function(a, b) {
+      var aActive = (a.address === root.selectedAddress || (a.deviceId && root.selectedDeviceId && a.deviceId === root.selectedDeviceId))
+      var bActive = (b.address === root.selectedAddress || (b.deviceId && root.selectedDeviceId && b.deviceId === root.selectedDeviceId))
+      var aScore = aActive ? (root.mirroring ? 3 : 2) : (a.paired ? 1 : 0)
+      var bScore = bActive ? (root.mirroring ? 3 : 2) : (b.paired ? 1 : 0)
+      if (aScore !== bScore) return bScore - aScore
+      var nameA = String(a.name || "")
+      var nameB = String(b.name || "")
+      return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" })
+    })
+  }
+
   function selectReceiver(name, address, deviceId, protocol) {
     if (root.selectedAddress !== address) {
       Quickshell.execDetached([root.ctlPath, "clear-route"])
@@ -265,6 +279,7 @@ BarWidget {
         root.pairingRequired = !root.receivers[i].paired && (root.selectedProtocol === "airplay")
       }
     }
+    root.receivers = root.sortReceivers(root.receivers)
     saveProcess.command = [root.ctlPath, "save", name, address, root.selectedDeviceId]
     saveProcess.running = true
     if (root.selectedProtocol === "airplay") {
@@ -308,6 +323,7 @@ BarWidget {
     root.receiverAvailable = false
     root.pairingRequired = false
     root.pairingPromptActive = false
+    root.receivers = root.sortReceivers(root.receivers)
     clearProcess.command = [root.ctlPath, "clear"]
     clearProcess.running = true
     root.injectPanel()
@@ -353,7 +369,7 @@ BarWidget {
         protocol: receiver.protocol || "airplay"
       })
     }
-    root.receivers = updated
+    root.receivers = root.sortReceivers(updated)
     if (root.selectedAddress === address && root.selectedProtocol === "airplay") root.pairingRequired = !paired
     root.injectPanel()
   }
@@ -499,6 +515,14 @@ BarWidget {
 
   onBarChanged: root.injectPanel()
   onSettingsChanged: root.injectPanel()
+  onMirroringChanged: {
+    if (root.receivers.length > 0) root.receivers = root.sortReceivers(root.receivers)
+    root.injectPanel()
+  }
+  onSelectedAddressChanged: {
+    if (root.receivers.length > 0) root.receivers = root.sortReceivers(root.receivers)
+    root.injectPanel()
+  }
 
   Process {
     id: loadProcess
@@ -513,6 +537,7 @@ BarWidget {
           root.selectedDeviceId = fields[2] || ""
           root.receiverAvailable = false
           root.checkPairing()
+          if (root.receivers.length > 0) root.receivers = root.sortReceivers(root.receivers)
         }
       }
       loadProcess.outText = ""
@@ -706,7 +731,7 @@ BarWidget {
     stderr: StdioCollector { waitForEnd: true; onStreamFinished: discoverProcess.errText = text }
     onExited: function(code) {
       if (code === 0) {
-        root.receivers = root.parseReceivers(discoverProcess.outText)
+        root.receivers = root.sortReceivers(root.parseReceivers(discoverProcess.outText))
         root.receiverAvailable = root.selectedAddress !== "" && root.receivers.some(function(receiver) {
           return receiver.address === root.selectedAddress
         })
@@ -734,7 +759,7 @@ BarWidget {
         var nonWfd = root.receivers.filter(function(receiver) {
           return (receiver.protocol || "airplay") !== "wfd"
         })
-        root.receivers = nonWfd.concat(wfdFound)
+        root.receivers = root.sortReceivers(nonWfd.concat(wfdFound))
         root.receiverAvailable = root.selectedAddress !== "" && root.receivers.some(function(receiver) {
           return receiver.address === root.selectedAddress
         })
