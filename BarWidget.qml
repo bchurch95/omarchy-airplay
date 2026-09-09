@@ -445,7 +445,7 @@ BarWidget {
     Quickshell.execDetached(["killall", "doubletake", "fluxcast"])
     Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
     Quickshell.execDetached([root.ctlPath, "clear-route"])
-    if (root.virtualMonitorName !== "" || root.extendDesktop) {
+    if (root.virtualMonitorName !== "") {
       Quickshell.execDetached([root.ctlPath, "virtual-display-remove"])
       root.virtualMonitorName = ""
     }
@@ -478,7 +478,6 @@ BarWidget {
     loadProcess.command = [root.ctlPath, "load"]
     loadProcess.running = true
     Quickshell.execDetached([root.ctlPath, "clear-route"])
-    Quickshell.execDetached([root.ctlPath, "virtual-display-remove"])
     root.discover()
     root.refreshNetwork()
   }
@@ -486,7 +485,7 @@ BarWidget {
   Component.onDestruction: {
     ensureRouteProcess.running = false
     Quickshell.execDetached([root.ctlPath, "clear-route"])
-    if (root.virtualMonitorName !== "" || root.extendDesktop) {
+    if (root.mirroring && root.virtualMonitorName !== "") {
       Quickshell.execDetached([root.ctlPath, "virtual-display-remove"])
     }
     loadProcess.running = false; networkProcess.running = false; firewallLoadProcess.running = false
@@ -832,7 +831,7 @@ BarWidget {
         (root.virtualMonitorName !== "" && modelData.name === root.virtualMonitorName) ||
         modelData.name.indexOf("VIRTUAL") === 0 ||
         modelData.name.indexOf("HEADLESS") === 0
-      )
+      ) && (!root.bar || !root.bar.screen || root.bar.screen.name === "eDP-1")
       anchors { top: true; bottom: true; left: true; right: true }
       color: root.setting("presentationWallpaperColor", "#111113")
       updatesEnabled: true
