@@ -828,8 +828,11 @@ BarWidget {
       required property var modelData
 
       screen: modelData
-      visible: (root.virtualMonitorName !== "" && modelData && modelData.name === root.virtualMonitorName)
-               || (root.mirroring && root.extendDesktop && modelData && modelData.name && (modelData.name.indexOf("VIRTUAL") === 0 || modelData.name.indexOf("HEADLESS") === 0))
+      visible: root.mirroring && root.extendDesktop && !!modelData && !!modelData.name && (
+        (root.virtualMonitorName !== "" && modelData.name === root.virtualMonitorName) ||
+        modelData.name.indexOf("VIRTUAL") === 0 ||
+        modelData.name.indexOf("HEADLESS") === 0
+      )
       anchors { top: true; bottom: true; left: true; right: true }
       color: root.setting("presentationWallpaperColor", "#111113")
       updatesEnabled: true
