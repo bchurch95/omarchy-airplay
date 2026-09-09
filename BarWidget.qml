@@ -378,15 +378,17 @@ BarWidget {
     if (!(executable === "doubletake" || /^\/[A-Za-z0-9._/-]*\/doubletake$/.test(executable))) return null
     if (!/^\d{1,5}-\d{1,5}$/.test(portRange) || ["h264", "hevc", "auto"].indexOf(codec) < 0 ||
         ["auto", "vaapi", "nvenc", "openh264", "none"].indexOf(encoder) < 0 || fps < 15 || fps > 60 || latency < 0 || latency > 1000) return null
-    var command = ["env"]
+    var command = []
     var vaapiDriver = String(root.setting("vaapiDriver", ""))
-    if (vaapiDriver !== "") command.push("LIBVA_DRIVER_NAME=" + vaapiDriver)
+    if (vaapiDriver !== "") {
+      command.push("env", "LIBVA_DRIVER_NAME=" + vaapiDriver)
+    }
     command.push(executable)
     command.push("-target", root.selectedAddress)
     command.push("-port-range", portRange, "-video-codec", codec, "-hwaccel", encoder, "-fps", String(fps), "-target-latency-ms", String(latency))
     if (!root.boolSetting("audio", true)) command.push("-no-audio")
     if (pairCode !== "") command.push("-pair", "-code", pairCode)
-    return [root.runnerPath, "--timeout", "120", "--"].concat(command)
+    return command
   }
 
   function launchStream(pairCode) {
