@@ -237,6 +237,9 @@ BarWidget {
   }
 
   function selectReceiver(name, address, deviceId, protocol) {
+    if (root.selectedAddress !== address) {
+      Quickshell.execDetached([root.ctlPath, "clear-route"])
+    }
     root.selectedName = name
     root.selectedAddress = address
     root.selectedDeviceId = deviceId || ""
@@ -404,7 +407,10 @@ BarWidget {
       clearRestoreProcess.running = true
       return "preparing-capture"
     }
-    return root.launchStream(pairCode || "")
+    ensureRouteProcess.pendingPairCode = pairCode || ""
+    ensureRouteProcess.command = [root.ctlPath, "ensure-route", root.selectedAddress]
+    ensureRouteProcess.running = true
+    return "preparing-route"
   }
 
   function stop(silent) {
@@ -412,6 +418,7 @@ BarWidget {
     mirrorProcess.running = false
     Quickshell.execDetached(["killall", "doubletake", "fluxcast"])
     Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
+    Quickshell.execDetached([root.ctlPath, "clear-route"])
     if (!silent) root.notify(root.t("mirroringTitle"), root.t("stopped", { name: root.selectedName }))
     root.injectPanel()
     return "stopping"
@@ -440,11 +447,14 @@ BarWidget {
   Component.onCompleted: {
     loadProcess.command = [root.ctlPath, "load"]
     loadProcess.running = true
+    Quickshell.execDetached([root.ctlPath, "clear-route"])
     root.discover()
     root.refreshNetwork()
   }
 
   Component.onDestruction: {
+    ensureRouteProcess.running = false
+    Quickshell.execDetached([root.ctlPath, "clear-route"])
     loadProcess.running = false; networkProcess.running = false; firewallLoadProcess.running = false
     firewallAllowProcess.running = false; firewallLookupForForgetProcess.running = false; firewallRemoveProcess.running = false
     saveProcess.running = false; clearProcess.running = false; clearRestoreProcess.running = false
@@ -478,6 +488,7 @@ BarWidget {
 
   function finishForget() {
     if (!pendingForgetReceiver) return
+    Quickshell.execDetached([root.ctlPath, "clear-route", pendingForgetReceiver.address])
     forgetProcess.command = [root.ctlPath, "forget", pendingForgetReceiver.deviceId]
     forgetProcess.running = true
     pendingForgetReceiver = null
@@ -583,12 +594,25 @@ BarWidget {
     property string errText: ""
     stderr: StdioCollector { waitForEnd: true; onStreamFinished: clearRestoreProcess.errText = text }
     onExited: function(code) {
-      if (code === 0) root.launchStream(root.pendingStartPairCode)
-      else {
+      if (code === 0) {
+        ensureRouteProcess.pendingPairCode = root.pendingStartPairCode
+        ensureRouteProcess.command = [root.ctlPath, "ensure-route", root.selectedAddress]
+        ensureRouteProcess.running = true
+      } else {
         root.streamError = String(clearRestoreProcess.errText).trim() || root.t("capturePreparationFailed")
         root.injectPanel()
       }
       clearRestoreProcess.errText = ""
+    }
+  }
+
+  Process {
+    id: ensureRouteProcess
+    property string pendingPairCode: ""
+    onExited: function(code) {
+      var pairCode = ensureRouteProcess.pendingPairCode
+      ensureRouteProcess.pendingPairCode = ""
+      root.launchStream(pairCode)
     }
   }
 
@@ -687,6 +711,7 @@ BarWidget {
         root.notify(root.t("connectionFailedTitle"), root.streamError)
       }
       Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
+      Quickshell.execDetached([root.ctlPath, "clear-route"])
       mirrorProcess.errText = ""
       root.injectPanel()
     }
