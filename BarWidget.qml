@@ -37,13 +37,26 @@ BarWidget {
   readonly property bool wfdScanning: wfdProcess.running
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
 
+  property bool extendDesktop: root.boolSetting("virtualDisplay", false)
+  property string virtualMonitorName: ""
+
+  function toggleExtendDesktop() {
+    root.extendDesktop = !root.extendDesktop
+    root.injectPanel()
+  }
+
+  function setExtendDesktop(val) {
+    root.extendDesktop = val
+    root.injectPanel()
+  }
+
   property var homepodOutputs: []
   property int homepodActiveCount: 0
 
   readonly property var mirroredProperties: [
     "bar", "settings", "receivers", "selectedName", "selectedAddress",
     "selectedDeviceId", "selectedProtocol", "receiverAvailable", "pairingRequired", "pairingPromptActive", "discoveryError", "streamError", "mirroring", "discovering", "wfdScanning",
-    "networkDescription", "firewallError", "firewallManaged", "homepodOutputs", "homepodActiveCount"
+    "networkDescription", "firewallError", "firewallManaged", "homepodOutputs", "homepodActiveCount", "extendDesktop", "virtualMonitorName"
   ]
 
   function refreshHomepods() {
@@ -346,7 +359,9 @@ BarWidget {
 
   function streamCommand(pairCode) {
     var proto = root.selectedProtocol || "airplay"
-    var mon = (root.bar && root.bar.screen && root.bar.screen.name) ? String(root.bar.screen.name) : "eDP-1"
+    var mon = (root.extendDesktop && root.virtualMonitorName !== "")
+      ? root.virtualMonitorName
+      : ((root.bar && root.bar.screen && root.bar.screen.name) ? String(root.bar.screen.name) : "eDP-1")
     if (proto === "wfd") {
       return ["fluxcast", "--protocol", "wfd", "--wfd-peer", root.selectedDeviceId || root.selectedAddress, "--monitor", mon]
     }
@@ -388,6 +403,12 @@ BarWidget {
     root.injectPanel()
   }
 
+  function proceedToRouteAndStream(pairCode) {
+    ensureRouteProcess.pendingPairCode = pairCode || ""
+    ensureRouteProcess.command = [root.ctlPath, "ensure-route", root.selectedAddress]
+    ensureRouteProcess.running = true
+  }
+
   function start(pairCode) {
     if (root.selectedAddress === "") return "no-receiver-selected"
     if (root.mirroring) return "already-mirroring"
@@ -401,15 +422,19 @@ BarWidget {
       return "pairing-required"
     }
     var proto = root.selectedProtocol || "airplay"
-    if (proto === "airplay" && root.boolSetting("alwaysPromptForCapture", false) && root.selectedDeviceId !== "") {
+    if (proto === "airplay" && (root.extendDesktop || root.boolSetting("alwaysPromptForCapture", false)) && root.selectedDeviceId !== "") {
       root.pendingStartPairCode = pairCode || ""
       clearRestoreProcess.command = [root.ctlPath, "clear-restore", root.selectedDeviceId]
       clearRestoreProcess.running = true
       return "preparing-capture"
     }
-    ensureRouteProcess.pendingPairCode = pairCode || ""
-    ensureRouteProcess.command = [root.ctlPath, "ensure-route", root.selectedAddress]
-    ensureRouteProcess.running = true
+    if (root.extendDesktop) {
+      virtualDisplayCreateProcess.pendingPairCode = pairCode || ""
+      virtualDisplayCreateProcess.command = [root.ctlPath, "virtual-display-create"]
+      virtualDisplayCreateProcess.running = true
+      return "creating-virtual-display"
+    }
+    root.proceedToRouteAndStream(pairCode || "")
     return "preparing-route"
   }
 
@@ -419,6 +444,10 @@ BarWidget {
     Quickshell.execDetached(["killall", "doubletake", "fluxcast"])
     Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
     Quickshell.execDetached([root.ctlPath, "clear-route"])
+    if (root.virtualMonitorName !== "" || root.extendDesktop) {
+      Quickshell.execDetached([root.ctlPath, "virtual-display-remove"])
+      root.virtualMonitorName = ""
+    }
     if (!silent) root.notify(root.t("mirroringTitle"), root.t("stopped", { name: root.selectedName }))
     root.injectPanel()
     return "stopping"
@@ -448,6 +477,7 @@ BarWidget {
     loadProcess.command = [root.ctlPath, "load"]
     loadProcess.running = true
     Quickshell.execDetached([root.ctlPath, "clear-route"])
+    Quickshell.execDetached([root.ctlPath, "virtual-display-remove"])
     root.discover()
     root.refreshNetwork()
   }
@@ -455,9 +485,13 @@ BarWidget {
   Component.onDestruction: {
     ensureRouteProcess.running = false
     Quickshell.execDetached([root.ctlPath, "clear-route"])
+    if (root.virtualMonitorName !== "" || root.extendDesktop) {
+      Quickshell.execDetached([root.ctlPath, "virtual-display-remove"])
+    }
     loadProcess.running = false; networkProcess.running = false; firewallLoadProcess.running = false
     firewallAllowProcess.running = false; firewallLookupForForgetProcess.running = false; firewallRemoveProcess.running = false
     saveProcess.running = false; clearProcess.running = false; clearRestoreProcess.running = false
+    virtualDisplayCreateProcess.running = false
     pairingCheckProcess.running = false; forgetProcess.running = false; discoverProcess.running = false; mirrorProcess.running = false
   }
 
@@ -595,14 +629,34 @@ BarWidget {
     stderr: StdioCollector { waitForEnd: true; onStreamFinished: clearRestoreProcess.errText = text }
     onExited: function(code) {
       if (code === 0) {
-        ensureRouteProcess.pendingPairCode = root.pendingStartPairCode
-        ensureRouteProcess.command = [root.ctlPath, "ensure-route", root.selectedAddress]
-        ensureRouteProcess.running = true
+        if (root.extendDesktop) {
+          virtualDisplayCreateProcess.pendingPairCode = root.pendingStartPairCode
+          virtualDisplayCreateProcess.command = [root.ctlPath, "virtual-display-create"]
+          virtualDisplayCreateProcess.running = true
+        } else {
+          root.proceedToRouteAndStream(root.pendingStartPairCode)
+        }
       } else {
         root.streamError = String(clearRestoreProcess.errText).trim() || root.t("capturePreparationFailed")
         root.injectPanel()
       }
       clearRestoreProcess.errText = ""
+    }
+  }
+
+  Process {
+    id: virtualDisplayCreateProcess
+    property string pendingPairCode: ""
+    property string outText: ""
+    stdout: StdioCollector { waitForEnd: true; onStreamFinished: virtualDisplayCreateProcess.outText = text }
+    onExited: function(code) {
+      if (code === 0) {
+        root.virtualMonitorName = String(virtualDisplayCreateProcess.outText).trim()
+      }
+      var pairCode = virtualDisplayCreateProcess.pendingPairCode
+      virtualDisplayCreateProcess.pendingPairCode = ""
+      virtualDisplayCreateProcess.outText = ""
+      root.proceedToRouteAndStream(pairCode)
     }
   }
 
@@ -712,6 +766,10 @@ BarWidget {
       }
       Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
       Quickshell.execDetached([root.ctlPath, "clear-route"])
+      if (root.virtualMonitorName !== "" || root.extendDesktop) {
+        Quickshell.execDetached([root.ctlPath, "virtual-display-remove"])
+        root.virtualMonitorName = ""
+      }
       mirrorProcess.errText = ""
       root.injectPanel()
     }
@@ -765,13 +823,13 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: "󰐨"
+    text: (root.mirroring && root.extendDesktop) ? "󰍹" : "󰐨"
     active: root.mirroring || root.homepodActiveCount > 0
     dimmed: !root.mirroring && root.homepodActiveCount === 0
     slotSize: Style.bar.statusSlot
     fontSize: Style.font.icon
     tooltipText: root.mirroring
-      ? root.t("tooltipMirroring", { name: root.selectedName })
+      ? (root.extendDesktop ? ("Extending desktop to " + root.selectedName) : root.t("tooltipMirroring", { name: root.selectedName }))
       : (root.homepodActiveCount > 0 ? ("HomePods (" + root.homepodActiveCount + " streaming)") : "AirPlay (Screen & HomePods)")
     onPressed: function(mouseButton) {
       root.togglePanel()

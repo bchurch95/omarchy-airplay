@@ -11,7 +11,7 @@ active_route_file="${state_dir}/active_route.tsv"
 known_file="${state_dir}/known_receivers.tsv"
 
 usage() {
-  printf 'Usage: %s discover|load|save NAME ADDRESS [DEVICE_ID]|clear|paired DEVICE_ID|forget DEVICE_ID|clear-restore DEVICE_ID|network|firewall-load DEVICE_ID|firewall-save DEVICE_ID ADDRESS PORT_RANGE|firewall-clear DEVICE_ID|ensure-route ADDRESS|clear-route [ADDRESS]\n' "$0" >&2
+  printf 'Usage: %s discover|load|save NAME ADDRESS [DEVICE_ID]|clear|paired DEVICE_ID|forget DEVICE_ID|clear-restore DEVICE_ID|network|firewall-load DEVICE_ID|firewall-save DEVICE_ID ADDRESS PORT_RANGE|firewall-clear DEVICE_ID|ensure-route ADDRESS|clear-route [ADDRESS]|virtual-display-create|virtual-display-remove [NAME]\n' "$0" >&2
   exit 2
 }
 
@@ -123,6 +123,38 @@ clear_route() {
         nmcli device reapply "$lan_iface" 2>/dev/null || true
       fi
     fi
+  fi
+}
+
+virtual_display_create() {
+  command -v hyprctl >/dev/null 2>&1 || {
+    printf 'hyprctl is required for virtual displays\n' >&2
+    exit 1
+  }
+  local existing
+  existing="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.name | startswith("HEADLESS")) | .name' | head -n 1)"
+  if [[ -n "$existing" ]]; then
+    printf '%s\n' "$existing"
+    return 0
+  fi
+  hyprctl output create headless >/dev/null 2>&1 || {
+    printf 'Failed to create headless display\n' >&2
+    exit 1
+  }
+  local created
+  created="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.name | startswith("HEADLESS")) | .name' | head -n 1)"
+  printf '%s\n' "${created:-HEADLESS-1}"
+}
+
+virtual_display_remove() {
+  command -v hyprctl >/dev/null 2>&1 || exit 0
+  local target="${1:-}"
+  if [[ -n "$target" ]]; then
+    hyprctl output remove "$target" >/dev/null 2>&1 || true
+  else
+    hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.name | startswith("HEADLESS")) | .name' | while read -r m; do
+      [[ -n "$m" ]] && hyprctl output remove "$m" >/dev/null 2>&1 || true
+    done
   fi
 }
 
@@ -536,6 +568,14 @@ case "$1" in
   clear-route)
     shift
     clear_route "$@"
+    ;;
+  virtual-display-create)
+    shift
+    virtual_display_create "$@"
+    ;;
+  virtual-display-remove)
+    shift
+    virtual_display_remove "$@"
     ;;
   *)
     usage

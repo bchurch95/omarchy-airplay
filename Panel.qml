@@ -30,6 +30,8 @@ Panel {
   property bool firewallManaged: false
   property bool discovering: false
   property bool wfdScanning: false
+  property bool extendDesktop: false
+  property string virtualMonitorName: ""
 
   // Main navigation tabs: "screens" | "miracast" | "audio"
   property string mainTab: "screens"
@@ -84,17 +86,17 @@ Panel {
         spacing: Style.spacing.panelGap
 
         PanelHero {
-          title: root.t("airplayMirror")
+          title: root.extendDesktop ? "AirPlay Display" : root.t("airplayMirror")
           meta: root.mirroring
-            ? root.t("mirroringTo", { name: root.selectedName })
+            ? (root.extendDesktop ? ("Extending desktop to " + root.selectedName + (root.virtualMonitorName !== "" ? (" (" + root.virtualMonitorName + ")") : "")) : root.t("mirroringTo", { name: root.selectedName }))
             : (root.selectedAddress === "" ? root.t("chooseReceiver")
-              : (root.receiverAvailable ? root.t("readyFor", { name: root.selectedName }) : root.t("searchingLocalNetwork")))
+              : (root.receiverAvailable ? (root.extendDesktop ? ("Ready to extend to " + root.selectedName) : root.t("readyFor", { name: root.selectedName })) : root.t("searchingLocalNetwork")))
           foreground: root.foreground
           fontFamily: root.fontFamily
 
           iconComponent: Component {
             Text {
-              text: root.mainTab === "audio" ? "󰓃" : (root.mainTab === "miracast" ? "󰖟" : "󰐨")
+              text: root.mainTab === "audio" ? "󰓃" : (root.mainTab === "miracast" ? "󰖟" : (root.extendDesktop ? "󰍹" : "󰐨"))
               color: root.mirroring || root.homepodActiveCount > 0 ? Color.accent : root.foreground
               font.family: root.fontFamily
               font.pixelSize: Style.font.display
@@ -200,6 +202,100 @@ Panel {
           visible: root.mainTab === "screens"
           width: parent.width
           spacing: Style.spacing.panelGap
+
+          // Display Mode Toggle: Mirror Screen vs Extend Desktop
+          Row {
+            width: parent.width
+            spacing: Style.spacing.xs
+
+            Rectangle {
+              id: mirrorModeBtn
+              readonly property bool active: !root.extendDesktop
+              width: (contentColumn.width - Style.spacing.xs) / 2
+              height: Style.space(26)
+              radius: Style.cornerRadius
+              color: active ? Style.hoverFillFor(Color.accent, root.foreground) : "transparent"
+              border.width: 1
+              border.color: active ? Color.accent : root.dim
+
+              Row {
+                anchors.centerIn: parent
+                spacing: Style.spacing.xs
+
+                Text {
+                  text: "󰐨"
+                  color: mirrorModeBtn.active ? Color.accent : root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                  text: "Mirror Screen"
+                  color: mirrorModeBtn.active ? Color.accent : root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: 10
+                  font.bold: mirrorModeBtn.active
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  if (root.hostWidget && root.extendDesktop) {
+                    root.hostWidget.setExtendDesktop(false)
+                  }
+                }
+              }
+            }
+
+            Rectangle {
+              id: extendModeBtn
+              readonly property bool active: root.extendDesktop
+              width: (contentColumn.width - Style.spacing.xs) / 2
+              height: Style.space(26)
+              radius: Style.cornerRadius
+              color: active ? Style.hoverFillFor(Color.accent, root.foreground) : "transparent"
+              border.width: 1
+              border.color: active ? Color.accent : root.dim
+
+              Row {
+                anchors.centerIn: parent
+                spacing: Style.spacing.xs
+
+                Text {
+                  text: "󰍹"
+                  color: extendModeBtn.active ? Color.accent : root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                  text: "Extend Desktop"
+                  color: extendModeBtn.active ? Color.accent : root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: 10
+                  font.bold: extendModeBtn.active
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  if (root.hostWidget && !root.extendDesktop) {
+                    root.hostWidget.setExtendDesktop(true)
+                  }
+                }
+              }
+            }
+          }
 
           // Protocol sub-filters
           Row {
@@ -351,7 +447,9 @@ Panel {
                     }
 
                     Text {
-                      text: receiverRow.modelData.address
+                      text: receiverRow.selected && root.mirroring && root.virtualMonitorName !== ""
+                        ? (receiverRow.modelData.address + " · " + root.virtualMonitorName)
+                        : receiverRow.modelData.address
                       textFormat: Text.PlainText
                       color: root.dim
                       font.family: root.fontFamily
@@ -384,8 +482,10 @@ Panel {
                   anchors.verticalCenter: parent.verticalCenter
 
                   PanelActionButton {
-                    iconText: root.mirroring && receiverRow.selected ? "󰓛" : "󰐨"
-                    tooltipText: root.mirroring && receiverRow.selected ? root.t("stopTooltip") : root.t("mirrorTooltip")
+                    iconText: root.mirroring && receiverRow.selected ? "󰓛" : (root.extendDesktop ? "󰍹" : "󰐨")
+                    tooltipText: root.mirroring && receiverRow.selected
+                      ? root.t("stopTooltip")
+                      : (root.extendDesktop ? ("Extend desktop to " + receiverRow.modelData.name) : root.t("mirrorTooltip"))
                     foreground: root.foreground
                     hoverColor: root.mirroring && receiverRow.selected ? Color.urgent : Color.accent
                     fontFamily: root.fontFamily
@@ -669,7 +769,9 @@ Panel {
                 }
 
                 Button {
-                  text: (root.mirroring && root.selectedAddress === modelData.address) ? "Stop" : "Mirror"
+                  text: (root.mirroring && root.selectedAddress === modelData.address)
+                    ? "Stop"
+                    : (root.extendDesktop ? "Extend" : "Mirror")
                   anchors.verticalCenter: parent.verticalCenter
                   onClicked: {
                     if (root.hostWidget) {
