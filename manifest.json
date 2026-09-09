@@ -38,7 +38,8 @@
       "portRange": "60000-60010",
       "audio": true,
       "alwaysPromptForCapture": false,
-      "virtualDisplay": false
+      "virtualDisplay": false,
+      "presentationWallpaperColor": "#111113"
     },
     "schema": [
       {
@@ -117,6 +118,13 @@
         "label": "Extend desktop (virtual screen)",
         "defaultValue": false,
         "description": "Create a virtual monitor in Hyprland to use the receiver as an extended second screen instead of mirroring."
+      },
+      {
+        "key": "presentationWallpaperColor",
+        "type": "string",
+        "label": "Virtual display background color",
+        "defaultValue": "#111113",
+        "description": "Solid hex color for the extended presentation display (leaves laptop wallpaper untouched)."
       }
     ]
   }

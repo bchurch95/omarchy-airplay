@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
 import "i18n/I18n.js" as I18n
@@ -817,6 +818,32 @@ BarWidget {
     repeat: true
     triggeredOnStart: true
     onTriggered: root.refreshHomepods()
+  }
+
+  Variants {
+    model: Quickshell.screens
+
+    PanelWindow {
+      id: virtualBackgroundWindow
+      required property var modelData
+
+      screen: modelData
+      visible: (root.virtualMonitorName !== "" && modelData && modelData.name === root.virtualMonitorName)
+               || (root.mirroring && root.extendDesktop && modelData && modelData.name && (modelData.name.indexOf("VIRTUAL") === 0 || modelData.name.indexOf("HEADLESS") === 0))
+      anchors { top: true; bottom: true; left: true; right: true }
+      color: root.setting("presentationWallpaperColor", "#111113")
+      updatesEnabled: true
+
+      WlrLayershell.namespace: "omarchy-presentation-background"
+      WlrLayershell.layer: WlrLayer.Bottom
+      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+      exclusionMode: ExclusionMode.Ignore
+
+      Rectangle {
+        anchors.fill: parent
+        color: root.setting("presentationWallpaperColor", "#111113")
+      }
+    }
   }
 
   BarIconButton {

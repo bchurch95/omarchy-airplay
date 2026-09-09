@@ -132,18 +132,18 @@ virtual_display_create() {
     exit 1
   }
   local existing
-  existing="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.name | startswith("HEADLESS")) | .name' | head -n 1)"
+  existing="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.name | (startswith("VIRTUAL") or startswith("HEADLESS"))) | .name' | head -n 1)"
   if [[ -n "$existing" ]]; then
     printf '%s\n' "$existing"
     return 0
   fi
-  hyprctl output create headless >/dev/null 2>&1 || {
+  hyprctl output create headless VIRTUAL-1 >/dev/null 2>&1 || {
     printf 'Failed to create headless display\n' >&2
     exit 1
   }
   local created
-  created="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.name | startswith("HEADLESS")) | .name' | head -n 1)"
-  printf '%s\n' "${created:-HEADLESS-1}"
+  created="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.name | (startswith("VIRTUAL") or startswith("HEADLESS"))) | .name' | head -n 1)"
+  printf '%s\n' "${created:-VIRTUAL-1}"
 }
 
 virtual_display_remove() {
@@ -152,7 +152,7 @@ virtual_display_remove() {
   if [[ -n "$target" ]]; then
     hyprctl output remove "$target" >/dev/null 2>&1 || true
   else
-    hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.name | startswith("HEADLESS")) | .name' | while read -r m; do
+    hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.name | (startswith("VIRTUAL") or startswith("HEADLESS"))) | .name' | while read -r m; do
       [[ -n "$m" ]] && hyprctl output remove "$m" >/dev/null 2>&1 || true
     done
   fi
