@@ -252,35 +252,62 @@ discover() {
 
   local probed_candidates=""
   if [[ -s "$candidate_file" ]]; then
-    local probed_seen=""
-    while IFS=$'\t' read -r k_name k_addr k_did k_proto; do
-      [[ -n "$k_addr" ]] || continue
-      if [[ "$probed_seen" == *"|$k_addr|"* ]]; then
-        continue
-      fi
-      probed_seen="${probed_seen}|${k_addr}|"
-      if [[ -n "$discovered" ]] && grep -q -F $'\t'"$k_addr"$'\t' <<<"$discovered"; then
-        continue
-      fi
-      if python3 -c "
-import socket, sys
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.settimeout(0.3)
+    probed_candidates="$(python3 - "$candidate_file" "$credentials_file" "${discovered:-}" << 'EOF'
+import sys, json, socket
+from concurrent.futures import ThreadPoolExecutor
+
+cand_file = sys.argv[1]
+creds_file = sys.argv[2]
+discovered_raw = sys.argv[3] if len(sys.argv) > 3 else ""
+
+discovered_addrs = set()
+for line in discovered_raw.splitlines():
+    parts = line.split('\t')
+    if len(parts) >= 2 and parts[1]:
+        discovered_addrs.add(parts[1])
+
+creds = {}
 try:
-    s.connect(('$k_addr', 7000))
-    s.close()
-    sys.exit(0)
+    with open(creds_file, 'r') as f:
+        creds = json.load(f)
 except Exception:
-    sys.exit(1)
-" 2>/dev/null; then
-        paired=0
-        if [[ -n "$k_did" && -f "$credentials_file" ]] &&
-          jq -e --arg device_id "$k_did" 'has($device_id)' "$credentials_file" >/dev/null 2>&1; then
-          paired=1
-        fi
-        probed_candidates="${probed_candidates:+${probed_candidates}$'\n'}${k_name}"$'\t'"${k_addr}"$'\t'"${k_did}"$'\t'"${paired}"$'\t'"${k_proto:-airplay}"
-      fi
-    done < "$candidate_file"
+    pass
+
+candidates = []
+seen = set(discovered_addrs)
+try:
+    with open(cand_file, 'r') as f:
+        for line in f:
+            parts = line.rstrip('\r\n').split('\t')
+            if len(parts) >= 2:
+                name, addr = parts[0], parts[1]
+                did = parts[2] if len(parts) > 2 else ''
+                proto = parts[3] if len(parts) > 3 else 'airplay'
+                if addr and addr not in seen:
+                    seen.add(addr)
+                    candidates.append((name, addr, did, proto))
+except Exception:
+    pass
+
+def probe(c):
+    name, addr, did, proto = c
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.4)
+        s.connect((addr, 7000))
+        s.close()
+        paired = '1' if (did and did in creds) else '0'
+        return f"{name}\t{addr}\t{did}\t{paired}\t{proto}"
+    except Exception:
+        return None
+
+if candidates:
+    with ThreadPoolExecutor(max_workers=min(32, len(candidates))) as ex:
+        for res in ex.map(probe, candidates):
+            if res:
+                print(res)
+EOF
+)" || true
   fi
   rm -f "$candidate_file"
 
@@ -472,11 +499,18 @@ set_sink() {
     target_sink="HomePods"
   else
     # Restore mode (returning from AirPlay/HomePods)
-    # 1. First attempt: restore previous_sink if it is currently online and not a virtual airplay sink
+    # If card has disabled Speaker profile, switch to Speaker
+    local card_id
+    card_id="$(pactl list cards short 2>/dev/null | awk '$2 ~ /pci.*(skl_hda_dsp|sof)/ { print $1; exit }')"
+    if [[ -n "$card_id" ]] && ! pactl list sinks short 2>/dev/null | grep -q "Speaker"; then
+      pactl set-card-profile "$card_id" "HiFi (HDMI1, HDMI2, HDMI3, Mic1, Speaker)" 2>/dev/null || true
+    fi
+
+    # 1. First attempt: restore previous_sink if valid and not HDMI/easyeffects
     if [[ -f "${state_dir}/previous_sink" ]]; then
       local prev
       prev="$(head -n 1 "${state_dir}/previous_sink" 2>/dev/null || true)"
-      if [[ -n "$prev" && "$prev" != "AirPlay" && "$prev" != "HomePods" ]]; then
+      if [[ -n "$prev" && "$prev" != "AirPlay" && "$prev" != "HomePods" && "$prev" != "easyeffects_sink" && "$prev" != *"HDMI"* ]]; then
         if pactl list sinks short 2>/dev/null | awk '{print $2}' | grep -Fxq "$prev"; then
           target_sink="$prev"
         fi
@@ -495,24 +529,24 @@ set_sink() {
 
     # 4. Fourth attempt: Laptop internal speakers / analog output
     if [[ -z "$target_sink" ]]; then
-      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 ~ /^alsa_output\.pci.*(Speaker|analog)/ { print $2; exit }')"
+      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 ~ /^alsa_output\.pci.*(Speaker|Headphones|analog)/ { print $2; exit }')"
     fi
 
     # 5. Fallback: Any non-virtual and non-HDMI sink
     if [[ -z "$target_sink" ]]; then
-      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods|AirPlay|HDMI/ { print $2; exit }')"
+      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods|AirPlay|HDMI|easyeffects/ { print $2; exit }')"
     fi
 
-    # 6. Final fallback: Any non-AirPlay sink
+    # 6. Final fallback: Any non-AirPlay/HomePods/easyeffects sink
     if [[ -z "$target_sink" ]]; then
-      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods|AirPlay/ { print $2; exit }')"
+      target_sink="$(pactl list sinks short 2>/dev/null | awk '$2 !~ /HomePods|AirPlay|easyeffects/ { print $2; exit }')"
     fi
   fi
 
   if [[ -n "$target_sink" ]]; then
     local current
     current="$(pactl get-default-sink 2>/dev/null || true)"
-    if [[ "$target" != "default" && "$current" != "HomePods" && "$current" != "AirPlay" ]]; then
+    if [[ "$target" != "default" && "$current" != "HomePods" && "$current" != "AirPlay" && "$current" != "easyeffects_sink" && "$current" != *"HDMI"* ]]; then
       printf '%s\n' "$current" > "${state_dir}/previous_sink"
     fi
     pactl set-default-sink "$target_sink" 2>/dev/null || true
