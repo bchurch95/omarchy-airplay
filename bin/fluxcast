@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# FluxCast Launcher (Universal Cast Backend)
+# ==============================================================================
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+FLUXCAST_MAIN="$PLUGIN_DIR/fluxcast/main.py"
+USER_VENV="$HOME/.local/share/fluxcast/venv"
+LOCAL_VENV="$PLUGIN_DIR/fluxcast/.venv"
+
+PYTHON_BIN=""
+
+if [[ -f "$USER_VENV/bin/python3" ]]; then
+    PYTHON_BIN="$USER_VENV/bin/python3"
+elif python3 -c "import pychromecast" >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+elif [[ -f "$LOCAL_VENV/bin/python3" ]]; then
+    PYTHON_BIN="$LOCAL_VENV/bin/python3"
+else
+    PYTHON_BIN="python3"
+fi
+
+exec "$PYTHON_BIN" "$FLUXCAST_MAIN" "$@"

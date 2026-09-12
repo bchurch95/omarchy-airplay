@@ -21,8 +21,8 @@ echo "${BOLD}      Omarchy AirPlay: HomePod & Multi-Room Audio Setup         ${R
 echo "${BOLD}================================================================${RESET}"
 
 # 1. Install Required Packages
-log_info "Step 1/6: Checking and installing required packages..."
-PACKAGES=(pipewire pipewire-pulse pulseaudio-utils jq avahi wireplumber libva-utils gst-plugins-good gst-plugins-bad gst-plugin-pipewire gst-plugin-qsv onevpl-intel-gpu intel-media-driver)
+log_info "Step 1/7: Checking and installing required packages..."
+PACKAGES=(pipewire pipewire-pulse pulseaudio-utils jq avahi wireplumber libva-utils gst-plugins-good gst-plugins-bad gst-plugin-pipewire gst-plugin-qsv onevpl-intel-gpu intel-media-driver wf-recorder python-pychromecast)
 
 for pkg in "${PACKAGES[@]}"; do
     if ! pacman -Qi "$pkg" >/dev/null 2>&1; then
@@ -51,7 +51,7 @@ fi
 log_success "Packages verified."
 
 # 2. Configure PipeWire Virtual Sink
-log_info "Step 2/6: Configuring PipeWire 'HomePods' virtual sink..."
+log_info "Step 2/7: Configuring PipeWire 'HomePods' virtual sink..."
 mkdir -p "$HOME/.config/pipewire/pipewire-pulse.conf.d"
 cat << 'PWSINK' > "$HOME/.config/pipewire/pipewire-pulse.conf.d/10-homepod-sink.conf"
 pulse.cmd = [
@@ -61,7 +61,7 @@ PWSINK
 log_success "PipeWire virtual sink configured (44.1 kHz CD quality)."
 
 # 3. Create Audio FIFO Pipe
-log_info "Step 3/6: Setting up /srv/music/desktop.pipe FIFO buffer..."
+log_info "Step 3/7: Setting up /srv/music/desktop.pipe FIFO buffer..."
 sudo mkdir -p /srv/music
 if [[ ! -p /srv/music/desktop.pipe ]]; then
     sudo rm -f /srv/music/desktop.pipe
@@ -72,7 +72,7 @@ sudo chmod 777 /srv/music
 log_success "FIFO pipe initialized."
 
 # 4. Configure /etc/owntone.conf for Apple HomePods
-log_info "Step 4/6: Configuring /etc/owntone.conf (AirPlay 2 user-agent & latency tuning)..."
+log_info "Step 4/7: Configuring /etc/owntone.conf (AirPlay 2 user-agent & latency tuning)..."
 if [[ -f /etc/owntone.conf ]]; then
     # Set User-Agent to official AirPlay to avoid HomePod 403 Forbidden errors
     if grep -q "user_agent =" /etc/owntone.conf; then
@@ -97,7 +97,7 @@ fi
 log_success "OwnTone configured."
 
 # 5. Install & Enable User Bridge Service
-log_info "Step 5/6: Setting up user background bridge service..."
+log_info "Step 5/7: Setting up user background bridge service..."
 mkdir -p "$HOME/.local/bin"
 cat << 'BRIDGE' > "$HOME/.local/bin/homepod-bridge"
 #!/bin/bash
@@ -134,13 +134,34 @@ systemctl --user daemon-reload
 systemctl --user enable --now homepod-bridge.service
 log_success "Bridge service active."
 
-# 6. Restart & Verify Services
-log_info "Step 6/6: Starting system services..."
+# 6. Configure Universal Cast & FluxCast Backend
+log_info "Step 6/7: Configuring Universal Cast & FluxCast backend..."
+PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+mkdir -p "$HOME/.local/bin"
+mkdir -p "$HOME/.local/share/fluxcast"
+
+# Ensure ~/.local/bin/fluxcast links to bundled backend
+ln -sf "$PLUGIN_DIR/bin/fluxcast" "$HOME/.local/bin/fluxcast"
+
+# Ensure Python dependencies (pychromecast, upnpclient) are available
+if ! python3 -c "import pychromecast" >/dev/null 2>&1; then
+    VENV_DIR="$HOME/.local/share/fluxcast/venv"
+    if [[ ! -f "$VENV_DIR/bin/python3" ]]; then
+        log_info "Creating Python environment for Google Cast in $VENV_DIR..."
+        python3 -m venv "$VENV_DIR"
+    fi
+    log_info "Installing Python dependencies (pychromecast, upnpclient)..."
+    "$VENV_DIR/bin/pip" install --quiet -r "$PLUGIN_DIR/fluxcast/requirements.txt" || true
+fi
+log_success "Universal Cast backend configured."
+
+# 7. Restart & Verify Services
+log_info "Step 7/7: Starting system services..."
 sudo systemctl enable --now avahi-daemon.service
 sudo systemctl enable --now owntone.service
 sudo systemctl restart owntone.service
 systemctl --user restart pipewire pipewire-pulse wireplumber || true
 
 echo ""
-log_success "Setup complete! HomePods and AirPlay 2 multi-room streaming is now ready."
-echo "${BOLD}You can now select any HomePod or room directly from the status bar AirPlay menu.${RESET}"
+log_success "Setup complete! Universal Cast (AirPlay 2, Google Cast, Miracast, HomePods) is now ready."
+echo "${BOLD}You can now select any Apple TV, Chromecast, Miracast TV, or HomePod directly from the status bar menu.${RESET}"

@@ -3,12 +3,23 @@
 set -euo pipefail
 
 config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 state_dir="${config_home}/omarchy-airplay"
 target_file="${state_dir}/target.tsv"
 firewall_file="${state_dir}/firewall.tsv"
 credentials_file="${config_home}/doubletake/credentials.json"
 active_route_file="${state_dir}/active_route.tsv"
 known_file="${state_dir}/known_receivers.tsv"
+
+fluxcast_bin() {
+  if [[ -x "${script_dir}/fluxcast" ]]; then
+    printf '%s\n' "${script_dir}/fluxcast"
+  elif command -v fluxcast >/dev/null 2>&1; then
+    command -v fluxcast
+  else
+    return 1
+  fi
+}
 
 usage() {
   printf 'Usage: %s discover|load|save NAME ADDRESS [DEVICE_ID] [PROTOCOL]|clear|paired DEVICE_ID|forget DEVICE_ID|clear-restore DEVICE_ID|network|firewall-load DEVICE_ID|firewall-save DEVICE_ID ADDRESS PORT_RANGE|firewall-clear DEVICE_ID|ensure-route ADDRESS|clear-route [ADDRESS]|virtual-display-create|virtual-display-remove [NAME]|stop-stream\n' "$0" >&2
@@ -354,10 +365,11 @@ EOF
     }
   ' | sort -t$'\t' -k1,1n -k2,2V | cut -f2-
 
-  if command -v fluxcast >/dev/null 2>&1; then
+  local fc
+  if fc="$(fluxcast_bin)"; then
     (
       local out
-      out="$(fluxcast --wfd-scan --wfd-timeout 4 2>/dev/null | awk '
+      out="$("$fc" --wfd-scan --wfd-timeout 4 2>/dev/null | awk '
         match($0, /\[[0-9]+\]\s+([0-9A-Fa-f:]{17})\s+(.*)\s+via/, m) {
           bssid = m[1]
           name = m[2]
@@ -378,8 +390,9 @@ wfd_scan() {
   local timeout="${1:-4}"
   local wfd_cache="/tmp/omarchy-wfd-peers.cache"
   local output=""
-  if command -v fluxcast >/dev/null 2>&1; then
-    output="$(fluxcast --wfd-scan --wfd-timeout "$timeout" 2>/dev/null | awk '
+  local fc
+  if fc="$(fluxcast_bin)"; then
+    output="$("$fc" --wfd-scan --wfd-timeout "$timeout" 2>/dev/null | awk '
       match($0, /\[[0-9]+\]\s+([0-9A-Fa-f:]{17})\s+(.*)\s+via/, m) {
         bssid = m[1]
         name = m[2]

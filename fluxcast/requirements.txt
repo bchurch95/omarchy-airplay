@@ -1,0 +1,5 @@
+pychromecast>=14.0.0
+upnpclient>=2.0.0
+requests>=2.28.0
+zeroconf>=0.130.0
+protobuf>=4.21.0

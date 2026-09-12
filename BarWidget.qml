@@ -11,6 +11,7 @@ BarWidget {
   moduleName: "io.github.bchurch95.omarchy-universal-cast"
 
   readonly property string ctlPath: String(Qt.resolvedUrl("bin/omarchy-airplay-run")).replace(/^file:\/\//, "")
+  readonly property string fluxcastPath: String(Qt.resolvedUrl("bin/fluxcast")).replace(/^file:\/\//, "")
   readonly property string runnerPath: ctlPath
   readonly property string localeName: Qt.locale().name
 
@@ -379,11 +380,12 @@ BarWidget {
     var mon = (root.extendDesktop && root.virtualMonitorName !== "")
       ? root.virtualMonitorName
       : ((root.bar && root.bar.screen && root.bar.screen.name) ? String(root.bar.screen.name) : "eDP-1")
+    var fc = root.fluxcastPath !== "" ? root.fluxcastPath : "fluxcast"
     if (proto === "wfd") {
-      return ["fluxcast", "--protocol", "wfd", "--wfd-peer", root.selectedDeviceId || root.selectedAddress, "--monitor", mon]
+      return [fc, "--protocol", "wfd", "--wfd-peer", root.selectedDeviceId || root.selectedAddress, "--monitor", mon]
     }
     if (proto === "cast") {
-      return ["fluxcast", "--protocol", "cast", "--tv-ip", root.selectedAddress, "--monitor", mon]
+      return [fc, "--protocol", "cast", "--tv-ip", root.selectedAddress, "--monitor", mon]
     }
     var executable = String(root.setting("doubletakePath", "doubletake"))
     var portRange = String(root.setting("portRange", "60000-60010"))
