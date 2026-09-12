@@ -114,6 +114,12 @@ Panel {
 
   function t(key, values) { return I18n.t(root.localeName, key, values) }
 
+  function positionScreenViewAtBeginning() {
+    if (typeof screenListView !== "undefined" && screenListView) {
+      screenListView.positionViewAtBeginning()
+    }
+  }
+
   function open() {
     root.controller.show()
     Qt.callLater(function() { if (root.opened) keyCatcher.forceActiveFocus() })
@@ -426,7 +432,7 @@ Panel {
               readonly property bool paired: modelData.paired === true
               readonly property bool hovered: rowClick.containsMouse
 
-              width: screenListView.width
+              width: ListView.view ? ListView.view.width : parent.width
               implicitHeight: receiverContent.implicitHeight + Style.spacing.md * 2
               radius: Style.cornerRadius
               color: selected
@@ -550,7 +556,7 @@ Panel {
                     if (receiverRow.selected) root.hostWidget.clearSelection()
                     else {
                       root.hostWidget.selectReceiver(receiverRow.modelData.name, receiverRow.modelData.address, receiverRow.modelData.deviceId, receiverRow.modelData.protocol)
-                      screenListView.positionViewAtBeginning()
+                      root.positionScreenViewAtBeginning()
                     }
                   }
                 }
@@ -574,7 +580,7 @@ Panel {
                       if (root.mirroring && receiverRow.selected) root.hostWidget.stop()
                       else {
                         root.hostWidget.selectReceiver(receiverRow.modelData.name, receiverRow.modelData.address, receiverRow.modelData.deviceId, receiverRow.modelData.protocol)
-                        screenListView.positionViewAtBeginning()
+                        root.positionScreenViewAtBeginning()
                         root.hostWidget.start("")
                       }
                     }

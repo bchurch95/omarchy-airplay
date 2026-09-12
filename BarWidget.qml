@@ -280,7 +280,7 @@ BarWidget {
       }
     }
     root.receivers = root.sortReceivers(root.receivers)
-    saveProcess.command = [root.ctlPath, "save", name, address, root.selectedDeviceId]
+    saveProcess.command = [root.ctlPath, "save", name, address, root.selectedDeviceId, root.selectedProtocol]
     saveProcess.running = true
     if (root.selectedProtocol === "airplay") {
       root.checkPairing()
@@ -460,7 +460,7 @@ BarWidget {
   function stop(silent) {
     root.deliberateStop = true
     mirrorProcess.running = false
-    Quickshell.execDetached(["killall", "doubletake", "fluxcast"])
+    Quickshell.execDetached([root.ctlPath, "stop-stream"])
     Quickshell.execDetached([root.ctlPath, "set-sink", "default"])
     Quickshell.execDetached([root.ctlPath, "clear-route"])
     if (root.virtualMonitorName !== "") {
@@ -535,8 +535,10 @@ BarWidget {
           root.selectedName = fields[0]
           root.selectedAddress = fields[1]
           root.selectedDeviceId = fields[2] || ""
+          root.selectedProtocol = fields[3] || "airplay"
           root.receiverAvailable = false
-          root.checkPairing()
+          if (root.selectedProtocol === "airplay") root.checkPairing()
+          else root.pairingRequired = false
           if (root.receivers.length > 0) root.receivers = root.sortReceivers(root.receivers)
         }
       }
